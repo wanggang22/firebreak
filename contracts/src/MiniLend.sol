@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.29;
 
-import {IPosition} from "./interfaces/IPosition.sol";
+import {IPosition, IRescueCallback} from "./interfaces/IPosition.sol";
 import {MockERC20} from "./MockERC20.sol";
 import {MockOracle} from "./MockOracle.sol";
 
@@ -23,6 +23,7 @@ contract MiniLend is IPosition {
     error HealthyPosition();
     error InsufficientRepay();
     error NotOperator();
+    error NotRescuing();
     error TransferFailed();
     error Reentrancy();
 
@@ -56,6 +57,10 @@ contract MiniLend is IPosition {
 
     uint256 private _lock = 1;
 
+    // flash-rescue bracket state
+    address private _rescuer;
+    address private _rescueUser;
+
     modifier nonReentrant() {
         if (_lock != 1) revert Reentrancy();
         _lock = 2;
@@ -85,11 +90,14 @@ contract MiniLend is IPosition {
     /* ── user actions ───────────────────────────────────── */
 
     function depositCollateral(address token, uint256 amount) external {
-        if (!listings[token].listed) revert Unlisted();
-        if (amount == 0) revert ZeroAmount();
-        _collateral[msg.sender][token] += amount;
-        if (!MockERC20(token).transferFrom(msg.sender, address(this), amount)) revert TransferFailed();
-        emit Deposited(msg.sender, token, amount);
+        _deposit(msg.sender, token, amount);
+    }
+
+    /// @inheritdoc IPosition
+    /// @notice Third parties (e.g. the Firebreak Mandate rotating collateral)
+    ///         may credit collateral to any user. Gifting collateral is safe.
+    function depositCollateralFor(address user, address token, uint256 amount) external {
+        _deposit(user, token, amount);
     }
 
     function withdrawCollateral(address token, uint256 amount) external nonReentrant {
@@ -149,12 +157,34 @@ contract MiniLend is IPosition {
     }
 
     /// @inheritdoc IPosition
-    function operatorWithdrawCollateral(address user, address token, uint256 amount, address to)
-        external
-        nonReentrant
-    {
+    function operatorWithdrawCollateral(address user, address token, uint256 amount, address to) external nonReentrant {
         if (!isOperator[user][msg.sender]) revert NotOperator();
         _withdraw(user, token, amount, to);
+    }
+
+    /// @inheritdoc IPosition
+    /// @notice Hands control to the operator to repair the position atomically.
+    ///         Health may dip during the callback (collateral leaves before the
+    ///         swap+repay lands). Within the bracket the pool delegates the
+    ///         health guarantee to the user-approved operator; FirebreakMandate
+    ///         enforces strict improvement (see FirebreakMandate.NoImprovement).
+    function operatorRescue(address user, bytes calldata data) external nonReentrant {
+        if (!isOperator[user][msg.sender]) revert NotOperator();
+        _rescuer = msg.sender;
+        _rescueUser = user;
+        IRescueCallback(msg.sender).onFirebreakRescue(user, data);
+        _rescuer = address(0);
+        _rescueUser = address(0);
+    }
+
+    /// @inheritdoc IPosition
+    function rescuePull(address token, uint256 amount, address to) external {
+        if (msg.sender != _rescuer) revert NotRescuing();
+        address user = _rescueUser;
+        if (_collateral[user][token] < amount) revert InsufficientCollateral();
+        _collateral[user][token] -= amount;
+        if (!MockERC20(token).transfer(to, amount)) revert TransferFailed();
+        emit Withdrawn(user, token, amount, to);
     }
 
     /* ── views ──────────────────────────────────────────── */
@@ -197,6 +227,14 @@ contract MiniLend is IPosition {
     }
 
     /* ── internals ──────────────────────────────────────── */
+
+    function _deposit(address user, address token, uint256 amount) internal {
+        if (!listings[token].listed) revert Unlisted();
+        if (amount == 0) revert ZeroAmount();
+        _collateral[user][token] += amount;
+        if (!MockERC20(token).transferFrom(msg.sender, address(this), amount)) revert TransferFailed();
+        emit Deposited(user, token, amount);
+    }
 
     function _withdraw(address user, address token, uint256 amount, address to) internal {
         if (!listings[token].listed) revert Unlisted();

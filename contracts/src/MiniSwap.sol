@@ -84,12 +84,7 @@ contract MiniSwap {
         emit Swapped(token, msg.sender, false, tokenIn, out);
     }
 
-    function swapUsdcForToken(address token, uint256 minTokenOut)
-        external
-        payable
-        nonReentrant
-        returns (uint256 out)
-    {
+    function swapUsdcForToken(address token, uint256 minTokenOut) external payable nonReentrant returns (uint256 out) {
         if (msg.value == 0) revert ZeroAmount();
         out = getTokenOut(token, msg.value);
         if (out < minTokenOut) revert SlippageExceeded();

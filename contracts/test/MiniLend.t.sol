@@ -167,9 +167,7 @@ contract MiniLendTest is Test {
         uint256 expectSeize = (700e18 * 1.1e18) / uint256(0.85e18);
         assertApproxEqAbs(mEURC.balanceOf(liq), expectSeize, 1e6);
         // remainder stays with alice
-        assertApproxEqAbs(
-            pool.collateralOf(alice, address(mEURC)), 1000e18 - expectSeize, 1e6
-        );
+        assertApproxEqAbs(pool.collateralOf(alice, address(mEURC)), 1000e18 - expectSeize, 1e6);
     }
 
     function test_RevertWhen_LiquidateUnderpays() public {
@@ -208,6 +206,16 @@ contract MiniLendTest is Test {
         vm.prank(operator);
         vm.expectRevert(MiniLend.UnhealthyWithdraw.selector);
         pool.operatorWithdrawCollateral(alice, address(mEURC), 300e18, operator);
+    }
+
+    function test_DepositCollateralFor_CreditsTargetUser() public {
+        mEURC.mint(operator, 500e18);
+        vm.startPrank(operator);
+        mEURC.approve(address(pool), 500e18);
+        pool.depositCollateralFor(alice, address(mEURC), 500e18);
+        vm.stopPrank();
+        assertEq(pool.collateralOf(alice, address(mEURC)), 500e18);
+        assertEq(pool.collateralOf(operator, address(mEURC)), 0);
     }
 
     function test_RepayFor_ThirdPartyRepaysUserDebt() public {
