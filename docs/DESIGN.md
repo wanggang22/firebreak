@@ -90,13 +90,18 @@ Mandate {
 4. **对照组**：同样仓位无 Firebreak → 被清算，损失 10%。屏幕上并排量化：`saved $X (Y%)`
 5. Sub-second finality、USDC gas、arcscan 链接全程可验
 
-## Week-1 必须验证的外部依赖
+## Week-1 依赖验证结论（T4 done, 2026-07-15）
 
-- [ ] **App Kits**（Swap/Send）在 Arc testnet 可用？→ 可用则 Rotate 路径走 App Kits（判分第 2 条）；不可用降级 MiniSwap
-- [ ] **Agent Stack** starter kit 接钱包可行？→ 可用则 keeper 钱包走 Agent Stack；不可用降级 viem 裸钱包
-- [ ] **Circle Wallets**（email/PIN，Letta 已跑通过的模式）→ 用户端 onboarding，W3 再接
+查了 npm 实际包 + Arc/Circle 文档，结论定案：
 
-结论回填本节。**无论验证结果如何，产品都能完成**——降级路径全部自有。
+- **App Kits** —— `@circle-fin/app-kit`（核心）+ `@circle-fin/adapter-viem-v2`，文档明确列 `Arc_Testnet` 支持。**但它是链下编排 SDK**（Send/Bridge/Swap/Unified Balance，抽象在 Gateway/CCTP 之上），**不是合约内可 `call` 的链上 DEX**。
+  - ⇒ **Rotate 路径不走 App Kits，保持自建 MiniSwap** —— 因为 flash-rescue 回调需要在**一个原子交易内、合约里**完成 swap，链下 SDK 给不了。这是硬约束决定的正确选择，不是降级。
+  - ⇒ **App Kits 的 relevant use 放在用户端**：救援储备金充值（Send / Bridge / Unified Balance 把别的链的 USDC 搬到 Arc 存进 Mandate reserve）。W3 dashboard 接。判分第 2 条命中点。
+- **Agent Stack** —— 有 `kits/claude-agent-sdk`（正好我 keeper 用 Claude）+ `@circle-fin/circle-tools`（wallet / service discovery / x402 payments），文档标 "Arc testnet use only"。
+  - ⇒ keeper **发 `rescue()` 交易用 viem 裸钱包**（最稳，任意合约调用）；**Agent Stack 用于"agent 自主性 + 钱包"叙事层**（strategist 的自主决策 + circle-tools 钱包）。W3 接，判分第 2 条命中点。
+- **Circle Wallets** —— `@circle-fin/w3s-pw-web-sdk`（1.1.11）/ `@circle-fin/modular-wallets-core`（1.0.13）均存在，Letta 已验证 email/PIN + Arc testnet。⇒ 用户 onboarding，W3 接。
+
+**核心执行链（合约 + viem keeper）完全自足，不依赖任何外部 SDK 可用性。** App Kits / Agent Stack / Circle Wallets 作为 relevant integration 在 W3 dashboard 阶段接入，正好覆盖判分第 2 条，且都在 relevant 的位置（入金 / agent 钱包 / onboarding），不是硬塞。
 
 ## 判分对照表
 

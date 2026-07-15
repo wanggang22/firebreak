@@ -1,0 +1,20 @@
+{
+  "name": "firebreak-agent",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Firebreak keeper agent — monitors loan health, executes bounded rescues.",
+  "scripts": {
+    "monitor": "tsx src/cli.ts monitor",
+    "rescue": "tsx src/cli.ts rescue",
+    "demo": "tsx src/demo.ts"
+  },
+  "dependencies": {
+    "@types/node": "^26.1.1",
+    "viem": "^2.55.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.1",
+    "typescript": "^5.9.3"
+  }
+}
