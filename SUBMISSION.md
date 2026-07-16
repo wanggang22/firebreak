@@ -5,7 +5,7 @@
 **Project:** Firebreak — a non-custodial liquidation firewall. Borrowers sign an on-chain Mandate; an autonomous keeper agent watches loan health and, before liquidators can move, executes the cheapest bounded rescue in a single atomic transaction.
 **Circle account email:** wangligang16161616@gmail.com
 **Tracks:** DeFi (primary) + Agentic Economy — the product is a DeFi primitive *and* an autonomous agent with money at stake.
-**Repo:** _(pushed for CP2 — see "Repo" note below)_
+**Repo:** https://github.com/wanggang22/firebreak
 
 ---
 
@@ -73,4 +73,4 @@ Native USDC as the gas + settlement token (`pay{value}`, 18-decimal), Arc smart 
 
 ### Repo
 
-Source: `contracts/` (Foundry) · `agent/` (keeper) · `agent/evidence/` (every real rescue, receipts + memos) · `docs/DESIGN.md` + `docs/PLAN.md`. Public GitHub link submitted with this checkpoint.
+https://github.com/wanggang22/firebreak — `contracts/` (Foundry) · `agent/` (keeper) · `agent/evidence/` (every real rescue, receipts + memos) · `docs/DESIGN.md` + `docs/PLAN.md`.
