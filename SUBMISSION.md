@@ -6,6 +6,7 @@
 **Circle account email:** wangligang16161616@gmail.com
 **Tracks:** DeFi (primary) + Agentic Economy — the product is a DeFi primitive *and* an autonomous agent with money at stake.
 **Repo:** https://github.com/wanggang22/firebreak
+**Live demo:** https://firebreak-site-wanggang22s-projects.vercel.app — an interactive replay of the real Arc testnet rescue (drift → Claude ranks → TOP-UP → health restored), with clickable arcscan proof. Run the fully-live version locally with `npm run demo:server`.
 
 ---
 
@@ -57,6 +58,8 @@ The full scenario is deployed and the keeper executed an end-to-end rescue with 
 - mEURC: `0x27779e2E363Fd5d7CBF0e0C6B1641c0d9b68F7d6` · mTBILL: `0x82f1C6108760855CF83EBA178a751dBEF3a6DFA5`
 
 **Reproducible:** `npm run demo` runs the whole loop (Claude ranks → executor executes → HF restored) against a local anvil deploy; the same code drives testnet by pointing `RPC`/`CHAIN_ID` at Arc. Two local-anvil evidence files (`run-local-001` deterministic, `run-local-002` LLM-driven) accompany the testnet run.
+
+**Dashboard — live console:** `npm run demo:server` boots anvil + the scenario + a thin SSE server; the single-screen page (`agent/app/index.html`) shows the health factor drift past the trigger and the keeper rescue it live (Claude's memo streamed in), with a permanent strip anchoring the real Arc-testnet rescue. A hosted, backendless replay of that testnet rescue is public at https://firebreak-site-wanggang22s-projects.vercel.app.
 
 ## Products used (Circle / Arc)
 

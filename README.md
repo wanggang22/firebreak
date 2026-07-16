@@ -37,6 +37,19 @@ Borrowers sign an **on-chain Mandate** — a bounded, conditional authorization 
 - **LLM decides, contracts execute**: the model picks the cheapest rescue path and writes a reasoning memo; execution is deterministic and doubly bounds-checked (off-chain + on-chain).
 - **Protocol-agnostic**: the keeper speaks `IPosition` — MiniLend is just the first adapter.
 
+## Run the demo
+
+Requires foundry (anvil + forge) on PATH and `ANTHROPIC_API_KEY` in the env
+(optional — falls back to the deterministic strategist).
+
+    cd agent
+    set -a; . C:/Users/ASUS/.claude-apis.env; set +a   # ANTHROPIC_API_KEY
+    npm run demo:server        # boots anvil + DemoSetup + server on :8099
+
+Open http://localhost:8099 → click **Apply FX drift** → watch the keeper detect
+the at-risk position and, with Claude ranking the vetted paths, rescue it live.
+The bottom strip links the same rescue already executed on Arc testnet.
+
 ## Repo layout
 
 - `contracts/` — Foundry project (MockOracle, MiniLend, MiniSwap, FirebreakMandate)
@@ -53,4 +66,5 @@ Borrowers sign an **on-chain Mandate** — a bounded, conditional authorization 
 - [x] LLM strategist — **Claude ranks the vetted rescue paths** and writes the borrower-facing memo; sizing + spend cap + action whitelist stay deterministic, so the model can only pick a bounds-checked path (strict-tool enum + cheapest-path fallback). 11/11 harness tests + [live ranking evidence](agent/evidence/llm-rank-001.json)
 - [x] LLM in the loop, on-chain — Claude ranked 3 viable paths and the executor **sent its choice to a live EVM**: HF 1.120 → 1.380, 131.88 USDC from reserve, verified by independent `readContract` ([evidence](agent/evidence/run-local-002.json)). Reproduce: `npm run demo` (see `agent/src/demo.ts`)
 - [x] **Live on Arc testnet** — full scenario deployed (chainId 5042002) and the keeper executed a **real LLM-driven rescue on-chain**: Claude ranked 3 viable paths, chose TOP-UP, HF 1.120 → 1.380, spent 0.94 USDC, tx [`0x6041…9869`](https://testnet.arcscan.app/tx/0x6041d281b4d37ae7e599787478e6edb008cc6606a9b7483dd37503105d4d9869) ([evidence](agent/evidence/run-testnet-001.json)). Contracts: Mandate [`0x529D…6915`](https://testnet.arcscan.app/address/0x529D2257dc8BEEA14D02FBc6123a079C08596915), pool [`0x8B52…49a3`](https://testnet.arcscan.app/address/0x8B526D995132dB3F55299A4e19045FE1aC3E49a3)
-- [ ] Dashboard + demo video
+- [x] Dashboard — single-screen live console (local anvil rescue + Arc-testnet proof strip); `npm run demo:server`
+- [ ] Demo video

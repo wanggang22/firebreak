@@ -7,7 +7,9 @@
   "scripts": {
     "monitor": "tsx src/cli.ts monitor",
     "rescue": "tsx src/cli.ts rescue",
-    "demo": "tsx src/demo.ts"
+    "demo": "tsx src/demo.ts",
+    "demo:server": "tsx src/server.ts",
+    "smoke": "tsx src/server.smoke.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",

@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Firebreak — liquidation firewall</title>
+<style>
+  :root {
+    --bg: #09090b; --panel: #111113; --panel-2: #161619; --line: #26262b;
+    --ink: #e4e4e7; --dim: #8b8b93; --faint: #5b5b63;
+    --amber: #f59e0b; --amber-2: #f97316; --teal: #2dd4bf; --red: #ef4444;
+    --mono: "Geist Mono", ui-monospace, "SF Mono", "IBM Plex Mono", Menlo, monospace;
+    --sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--mono);
+    font-variant-numeric: tabular-nums; line-height: 1.4; padding: 24px; }
+  a { color: var(--teal); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  header { display: flex; align-items: baseline; justify-content: space-between;
+    border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 20px; }
+  .brand { font-weight: 600; letter-spacing: 0.04em; }
+  .brand b { color: var(--amber); }
+  .tagline { color: var(--dim); font-size: 13px; margin-left: 12px; }
+  .badge { font-size: 12px; color: var(--dim); border: 1px solid var(--line);
+    border-radius: 4px; padding: 4px 8px; }
+  .grid { display: grid; grid-template-columns: 300px 1fr; gap: 18px; align-items: start; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  .panel h2 { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--faint); font-weight: 600; margin-bottom: 12px; }
+  .row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; }
+  .row .k { color: var(--dim); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font-size: 11px; border: 1px solid var(--line); border-radius: 999px;
+    padding: 3px 9px; color: var(--dim); }
+  .stack { display: grid; gap: 18px; }
+  .controls { display: flex; gap: 10px; margin-top: 4px; }
+  button { font-family: var(--mono); font-size: 13px; cursor: pointer;
+    border-radius: 6px; padding: 9px 16px; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--ink); transition: opacity .15s; }
+  button.primary { background: var(--amber); color: #1a1206; border-color: var(--amber); font-weight: 600; }
+  button:disabled { opacity: .45; cursor: default; }
+  .muted { color: var(--faint); font-size: 12px; }
+  .gauge { position: relative; height: 220px; display: flex; align-items: flex-end;
+    gap: 20px; padding: 10px 4px 0; }
+  .track { position: relative; width: 46px; height: 100%; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .fill { position: absolute; left: 0; right: 0; bottom: 0; transform-origin: bottom;
+    background: linear-gradient(180deg, var(--teal), #0f766e);
+    transition: transform .9s cubic-bezier(.4,0,.2,1), background .4s; }
+  .fill.risk { background: linear-gradient(180deg, var(--amber-2), var(--amber)); }
+  .line { position: absolute; left: -4px; right: -4px; height: 0; border-top: 2px dashed var(--amber); }
+  .line.target { border-top-color: rgba(45,212,191,.5); }
+  .line span { position: absolute; right: 100%; margin-right: 8px; white-space: nowrap;
+    font-size: 11px; color: var(--amber); transform: translateY(-50%); }
+  .line.target span { color: var(--teal); }
+  .readout { display: flex; flex-direction: column; justify-content: flex-end; }
+  .hf-num { font-size: 46px; font-weight: 600; line-height: 1; }
+  .pill { display: inline-block; margin-top: 10px; font-size: 12px; padding: 4px 10px;
+    border-radius: 999px; border: 1px solid var(--line); color: var(--dim); width: fit-content; }
+  .pill.healthy { color: var(--teal); border-color: rgba(45,212,191,.4); }
+  .pill.at_risk { color: var(--amber); border-color: rgba(245,158,11,.4); }
+  .pill.rescuing { color: var(--amber); }
+  .pill.rescued { color: var(--teal); border-color: rgba(45,212,191,.4); }
+  .log { display: grid; gap: 8px; font-size: 13px; }
+  .evt { border-left: 2px solid var(--line); padding: 6px 12px; opacity: 0;
+    transform: translateY(6px); animation: rise .35s forwards; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  .evt .tag { color: var(--faint); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
+  .evt.mono b { color: var(--amber); }
+  table.cand { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 13px; }
+  table.cand td, table.cand th { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+  table.cand th { color: var(--faint); font-weight: 500; font-size: 11px; }
+  tr.chosen td { color: var(--teal); }
+  .memo { border: 1px solid rgba(45,212,191,.35); background: rgba(45,212,191,.05);
+    border-radius: 6px; padding: 12px; margin-top: 8px; font-size: 13px; color: var(--ink); }
+  .memo .who { color: var(--teal); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <span class="brand">■ <b>FIREBREAK</b></span>
+        <span class="tagline">the line the fire can't cross</span>
+      </div>
+      <a class="badge" id="tn-badge" target="_blank" rel="noopener">● Live on Arc testnet ↗</a>
+    </header>
+
+    <div class="grid">
+      <div class="stack">
+        <div class="panel" id="position"><h2>Position</h2></div>
+        <div class="panel" id="mandate"><h2>Mandate</h2></div>
+        <div class="controls">
+          <button class="primary" id="btn-drift">Apply FX drift</button>
+          <button id="btn-reset">Reset</button>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="panel" id="gauge-panel"><h2>Health Factor <span class="muted" id="devnet-tag">· local devnet (live)</span></h2></div>
+        <div class="panel" id="log-panel"><h2>Keeper</h2><div id="log" class="log"></div></div>
+        <div class="panel" id="proof-panel"><h2>Proven on Arc testnet</h2></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  const $ = (id) => document.getElementById(id);
+  const LO = 1.0, HI = 1.5;
+  const pct = (hf) => Math.max(0, Math.min(1, (hf - LO) / (HI - LO)));
+  const ACT = { TOPUP: "TOP-UP", ROTATE: "ROTATE", DELEVERAGE: "DELEVERAGE" };
+  let TRIGGER = 1.2;
+
+  function renderPosition(p) {
+    $("position").innerHTML = `<h2>Position</h2>
+      <div class="row"><span class="k">${p.symbol}</span><span>${p.amount.toFixed(0)} · $${p.valueUsd.toFixed(0)}</span></div>
+      <div class="row"><span class="k">debt</span><span>${p.debt.toFixed(2)} USDC</span></div>`;
+  }
+  function renderMandate(m) {
+    $("mandate").innerHTML = `<h2>Mandate</h2>
+      <div class="row"><span class="k">trigger</span><span>${m.trigger.toFixed(2)}</span></div>
+      <div class="row"><span class="k">spend cap</span><span>${m.spendCap.toFixed(0)} USDC</span></div>
+      <div class="row"><span class="k">reserve</span><span>${m.reserve.toFixed(2)} USDC</span></div>
+      <div class="row"><span class="k">actions</span></div>
+      <div class="chips">${m.allowed.map((a) => `<span class="chip">${a}</span>`).join("")}</div>`;
+  }
+  function renderGauge(hf, trigger, phase) {
+    const trigH = (pct(trigger) * 100).toFixed(1);
+    const targH = (pct(1.38) * 100).toFixed(1);
+    const risk = hf < trigger ? "risk" : "";
+    const labels = { healthy: "Healthy", at_risk: "At risk", rescuing: "Rescuing…", rescued: "Rescued" };
+    $("gauge-panel").innerHTML = `<h2>Health Factor <span class="muted">· local devnet (live)</span></h2>
+      <div class="gauge">
+        <div class="track">
+          <div class="fill ${risk}" style="height:100%; transform: scaleY(${pct(hf).toFixed(3)})"></div>
+          <div class="line" style="bottom:${trigH}%"><span>trigger ${trigger.toFixed(2)}</span></div>
+          <div class="line target" style="bottom:${targH}%"><span>target 1.38</span></div>
+        </div>
+        <div class="readout">
+          <div class="hf-num">${hf.toFixed(3)}</div>
+          <div class="pill ${phase}">${labels[phase] || phase}</div>
+        </div>
+      </div>`;
+  }
+  function setPhase(p) { const pill = document.querySelector(".pill"); if (pill) pill.className = "pill " + p; }
+
+  function addEvt(tag, html, cls = "") {
+    const d = document.createElement("div");
+    d.className = "evt mono " + cls;
+    d.innerHTML = `<div class="tag">${tag}</div>${html}`;
+    $("log").appendChild(d);
+  }
+  function clearLog() { $("log").innerHTML = ""; }
+  function candTable(target, viable, chosen) {
+    const rows = viable.map((c) =>
+      `<tr class="${c.action === chosen ? "chosen" : ""}"><td>${ACT[c.action] || c.action}</td>
+        <td>${(Number(c.cost) / 1e18).toFixed(2)} USDC</td><td>${c.why}</td></tr>`).join("");
+    return `<table class="cand"><tr><th>path</th><th>cost</th><th>detail</th></tr>${rows}</table>`;
+  }
+
+  function streamRescue(force) {
+    clearLog();
+    setPhase("rescuing");
+    let viable = [];
+    const es = new EventSource("/api/rescue" + (force ? "?force=1" : ""));
+    es.addEventListener("monitor", (e) => {
+      const d = JSON.parse(e.data);
+      const hf = Number(d.hf) / 1e18, tr = Number(d.trigger) / 1e18;
+      renderGauge(hf, tr, hf < tr ? "rescuing" : "healthy");
+      if (d.watching) addEvt("monitor", `watching… HF ${hf.toFixed(3)} vs trigger ${tr.toFixed(2)}`);
+      else addEvt("monitor", `HF <b>${hf.toFixed(3)}</b> &lt; trigger ${tr.toFixed(2)}`);
+    });
+    es.addEventListener("candidates", (e) => {
+      const d = JSON.parse(e.data);
+      viable = d.viable;
+      addEvt("strategist", `${d.viable.length} viable paths sized to target ${(Number(d.target) / 1e18).toFixed(2)}` + candTable(d.target, d.viable, null));
+    });
+    es.addEventListener("llm", (e) => {
+      const d = JSON.parse(e.data);
+      addEvt(d.usedLlm ? "claude" : "strategist", `chose <b>${d.chosenAction}</b>` +
+        `<div class="memo"><div class="who">${d.usedLlm ? "Claude" : "deterministic"} memo</div>${d.memo}</div>`);
+    });
+    es.addEventListener("executor", (e) => {
+      const d = JSON.parse(e.data);
+      addEvt("executor", `tx <b>${d.txHash.slice(0, 10)}…</b> · spent ${(Number(d.spent) / 1e18).toFixed(2)} USDC <span class="muted">(local devnet)</span>`);
+    });
+    es.addEventListener("restored", (e) => {
+      const d = JSON.parse(e.data);
+      const after = Number(d.hfAfter) / 1e18;
+      renderGauge(after, TRIGGER, "rescued");
+      addEvt("restored", `HF ${(Number(d.hfBefore) / 1e18).toFixed(3)} → <b>${after.toFixed(3)}</b>`);
+    });
+    es.addEventListener("done", () => es.close());
+    es.addEventListener("error", () => es.close());
+  }
+
+  $("btn-drift").onclick = async () => {
+    $("btn-drift").disabled = true;
+    const { hf } = await fetch("/api/drift", { method: "POST" }).then((r) => r.json());
+    renderGauge(hf, TRIGGER, "at_risk");
+    streamRescue(true);
+  };
+  $("btn-reset").onclick = async () => {
+    const s = await fetch("/api/reset", { method: "POST" }).then((r) => r.json());
+    clearLog();
+    TRIGGER = s.trigger;
+    renderPosition(s.position); renderMandate(s.mandate); renderGauge(s.hf, s.trigger, s.phase);
+    $("btn-drift").disabled = false;
+  };
+
+  async function loadState() {
+    const s = await fetch("/api/state").then((r) => r.json());
+    TRIGGER = s.trigger;
+    renderPosition(s.position);
+    renderMandate(s.mandate);
+    renderGauge(s.hf, s.trigger, s.phase);
+  }
+  async function loadProof() {
+    const p = await fetch("/api/proof").then((r) => r.json());
+    const tx = p.result.txHash, exp = p.result.explorerUrl;
+    $("tn-badge").href = exp;
+    $("proof-panel").innerHTML = `<h2>Proven on Arc testnet <span class="muted">· verified</span></h2>
+      <div class="row"><span class="k">rescue</span><span>HF ${p.result.hfBefore} → ${p.result.hfAfter} · ${p.result.spent}</span></div>
+      <div class="row"><span class="k">chosen by Claude</span><span>${p.ranking.chosenAction}</span></div>
+      <div class="row"><span class="k">tx</span><a href="${exp}" target="_blank" rel="noopener">${tx.slice(0, 12)}… ↗</a></div>
+      <div class="memo"><div class="who">Claude memo (testnet)</div>${p.ranking.memo.split("Reason: ")[1] || p.ranking.memo}</div>`;
+  }
+  loadState();
+  loadProof();
+  </script>
+</body>
+</html>

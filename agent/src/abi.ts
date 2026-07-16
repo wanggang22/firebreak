@@ -15,6 +15,7 @@ export const miniSwapAbi = [
 
 export const oracleAbi = [
   { type: "function", name: "getPrice", stateMutability: "view", inputs: [{ name: "token", type: "address" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "setPrice", stateMutability: "nonpayable", inputs: [{ name: "token", type: "address" }, { name: "priceWad", type: "uint256" }], outputs: [] },
 ] as const;
 
 // Plan tuple mirrors FirebreakMandate.Plan (order matters for abi encoding).
