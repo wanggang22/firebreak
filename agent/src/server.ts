@@ -1,0 +1,139 @@
+// Thin HTTP + SSE server behind the demo dashboard. Self-manages a local anvil
+// devnet (via scenario.ts) and reuses the keeper's monitor/strategist/executor
+// unchanged. No framework. Run: npm run demo:server.
+
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
+import { loadDeployment } from "./config.ts";
+import { readSignals, readTerms } from "./monitor.ts";
+import { walletFor, publicClient } from "./chain.ts";
+import { oracleAbi } from "./abi.ts";
+import { tick, type Stage } from "./keeper.ts";
+import { makeClaudeRanker } from "./llm.ts";
+import { ACTION, type Address } from "./types.ts";
+import { deployScenario, stopScenario, ANVIL } from "./scenario.ts";
+
+const __dir = dirname(fileURLToPath(import.meta.url));
+const APP = resolve(__dir, "../app/index.html");
+const DEP = loadDeployment(resolve(__dir, "../deployments/local.json"));
+const USER = ANVIL.alice as Address;
+const PORT = Number(process.env.PORT) || 8099;
+
+process.env.RPC = "http://127.0.0.1:8545";
+process.env.CHAIN_ID = "31337";
+
+const MEURC = DEP.tokens[0].token;
+const DRIFT_PRICE = 700000000000000000n; // 0.70e18
+
+const fmt = (x: bigint) => Number(x) / 1e18;
+const ACTION_CHIPS = (bits: number) =>
+  [
+    bits & ACTION.DELEVERAGE ? "DELEVERAGE" : null,
+    bits & ACTION.ROTATE ? "ROTATE" : null,
+    bits & ACTION.TOPUP ? "TOPUP" : null,
+  ].filter(Boolean);
+
+function json(res: ServerResponse, code: number, body: unknown) {
+  const s = JSON.stringify(body);
+  res.writeHead(code, { "content-type": "application/json", "content-length": Buffer.byteLength(s) });
+  res.end(s);
+}
+
+async function snapshot() {
+  const [s, t] = await Promise.all([readSignals(DEP, USER), readTerms(DEP, USER)]);
+  const collateral = s.collaterals.find((c) => c.amount > 0n) ?? s.collaterals[0];
+  const hf = Number(s.hf) / 1e18;
+  const trigger = Number(t.hfTriggerWad) / 1e18;
+  const phase = hf >= trigger ? "healthy" : "at_risk";
+  return {
+    phase,
+    hf,
+    trigger,
+    position: {
+      symbol: collateral.symbol,
+      amount: fmt(collateral.amount),
+      valueUsd: fmt((collateral.amount * collateral.priceWad) / 10n ** 18n),
+      debt: fmt(s.debt),
+    },
+    mandate: {
+      trigger,
+      spendCap: fmt(t.maxSpendPerRescue),
+      reserve: fmt(t.reserve),
+      allowed: ACTION_CHIPS(t.allowedActions),
+    },
+  };
+}
+
+async function applyDrift(): Promise<number> {
+  const wallet = walletFor(ANVIL.deployerPk as `0x${string}`);
+  const hash = await wallet.writeContract({
+    address: DEP.oracle, abi: oracleAbi, functionName: "setPrice", args: [MEURC, DRIFT_PRICE],
+  });
+  await publicClient().waitForTransactionReceipt({ hash });
+  const s = await readSignals(DEP, USER);
+  return Number(s.hf) / 1e18;
+}
+
+const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+  const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
+  try {
+    if (req.method === "GET" && url.pathname === "/") {
+      const html = readFileSync(APP);
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      return res.end(html);
+    }
+    if (req.method === "GET" && url.pathname === "/api/state") {
+      return json(res, 200, await snapshot());
+    }
+    if (req.method === "GET" && url.pathname === "/api/proof") {
+      const p = JSON.parse(readFileSync(resolve(__dir, "../evidence/run-testnet-001.json"), "utf8"));
+      return json(res, 200, p);
+    }
+    if (req.method === "POST" && url.pathname === "/api/drift") {
+      const hf = await applyDrift();
+      return json(res, 200, { hf });
+    }
+    if (req.method === "POST" && url.pathname === "/api/reset") {
+      await deployScenario();
+      return json(res, 200, await snapshot());
+    }
+    if (req.method === "GET" && url.pathname === "/api/rescue") {
+      res.writeHead(200, {
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache",
+        connection: "keep-alive",
+      });
+      const send = (s: Stage) => res.write(`event: ${s.stage}\ndata: ${JSON.stringify(s.data)}\n\n`);
+      const force = url.searchParams.get("force") === "1";
+      try {
+        for (let i = 0; !force && i < 60; i++) {
+          const s = await readSignals(DEP, USER);
+          const t = await readTerms(DEP, USER);
+          if (s.hf < t.hfTriggerWad) break;
+          send({ stage: "monitor", data: { hf: s.hf.toString(), trigger: t.hfTriggerWad.toString(), watching: true } });
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+        const ranker = makeClaudeRanker();
+        await tick(DEP, ANVIL.keeperPk as `0x${string}`, USER, { ranker, onStage: send });
+        res.write(`event: done\ndata: {}\n\n`);
+      } catch (err) {
+        res.write(`event: error\ndata: ${JSON.stringify({ message: String((err as Error).message ?? err) })}\n\n`);
+      }
+      return res.end();
+    }
+    json(res, 404, { error: "not found" });
+  } catch (err) {
+    json(res, 503, { error: String((err as Error).message ?? err) });
+  }
+});
+
+async function main() {
+  console.log("[server] deploying local scenario (anvil + DemoSetup)...");
+  await deployScenario();
+  server.listen(PORT, () => console.log(`[server] http://localhost:${PORT}`));
+}
+process.on("SIGINT", () => { stopScenario(); process.exit(0); });
+process.on("SIGTERM", () => { stopScenario(); process.exit(0); });
+main().catch((e) => { console.error(e); stopScenario(); process.exit(1); });
