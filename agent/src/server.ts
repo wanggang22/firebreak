@@ -25,7 +25,13 @@ process.env.RPC = "http://127.0.0.1:8545";
 process.env.CHAIN_ID = "31337";
 
 const MEURC = DEP.tokens[0].token;
-const DRIFT_PRICE = 700000000000000000n; // 0.70e18
+// The DemoSetup scenario ends already drifted (mEURC 0.98, HF ~1.12). For the
+// dashboard we want to START healthy and let the operator trigger the drift, so
+// the server resets mEURC to 1.08 (HF ~1.234) after every deploy/reset, then
+// `applyDrift` moves it to 0.98 — a moderate drift where the reserve-funded
+// TOP-UP legitimately restores health to target (matches the on-chain evidence).
+const HEALTHY_PRICE = 1080000000000000000n; // 1.08e18 → HF ~1.234 (above trigger)
+const DRIFT_PRICE = 980000000000000000n; // 0.98e18 → HF ~1.12 (below trigger)
 
 const fmt = (x: bigint) => Number(x) / 1e18;
 const ACTION_CHIPS = (bits: number) =>
@@ -66,15 +72,19 @@ async function snapshot() {
   };
 }
 
-async function applyDrift(): Promise<number> {
+async function setPrice(price: bigint): Promise<number> {
   const wallet = walletFor(ANVIL.deployerPk as `0x${string}`);
   const hash = await wallet.writeContract({
-    address: DEP.oracle, abi: oracleAbi, functionName: "setPrice", args: [MEURC, DRIFT_PRICE],
+    address: DEP.oracle, abi: oracleAbi, functionName: "setPrice", args: [MEURC, price],
   });
   await publicClient().waitForTransactionReceipt({ hash });
   const s = await readSignals(DEP, USER);
   return Number(s.hf) / 1e18;
 }
+/** Reset mEURC to a healthy price so the demo starts above the trigger. */
+const setHealthy = () => setPrice(HEALTHY_PRICE);
+/** The operator-triggered FX drift that pushes the position past the trigger. */
+const applyDrift = () => setPrice(DRIFT_PRICE);
 
 const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
@@ -97,6 +107,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
     }
     if (req.method === "POST" && url.pathname === "/api/reset") {
       await deployScenario();
+      await setHealthy();
       return json(res, 200, await snapshot());
     }
     if (req.method === "GET" && url.pathname === "/api/rescue") {
@@ -132,6 +143,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 async function main() {
   console.log("[server] deploying local scenario (anvil + DemoSetup)...");
   await deployScenario();
+  await setHealthy();
   server.listen(PORT, () => console.log(`[server] http://localhost:${PORT}`));
 }
 process.on("SIGINT", () => { stopScenario(); process.exit(0); });
