@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+  :root {
+    --bg: #09090b; --panel: #111113; --panel2: #161619; --line: #26262b;
+    --ink: #e4e4e7; --dim: #8b8b93; --faint: #9b9ba4;
+    --amber: #f59e0b; --ember: #f97316; --teal: #2dd4bf; --red: #ef4444;
+  }
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    width: 1920px; height: 1080px; overflow: hidden; background: var(--bg);
+    color: var(--ink); font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  .sans { font-family: "JetBrains Mono", ui-monospace, monospace; }
+  .scene { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; overflow: hidden; padding: 120px 150px; }
+  #s1 { z-index: 1; }
+  #s2, #s3, #s4, #s5, #s6 { opacity: 0; }
+  .glow { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .16; pointer-events: none; }
+  .kicker { font-size: 20px; letter-spacing: .32em; text-transform: uppercase; color: var(--faint); }
+  .h1 { font-size: 108px; font-weight: 700; line-height: 1.02; letter-spacing: -.01em; }
+  .h2 { font-size: 66px; font-weight: 700; line-height: 1.08; letter-spacing: -.01em; }
+  .lead { font-size: 30px; color: var(--dim); line-height: 1.5; max-width: 30ch; }
+  .amber { color: var(--amber); } .teal { color: var(--teal); } .ember { color: var(--ember); }
+  .fbline { position: absolute; height: 3px; background: var(--amber); box-shadow: 0 0 24px var(--amber); }
+
+  /* dashboard (scene 4) */
+  .dash { display: grid; grid-template-columns: 380px 1fr 620px; gap: 34px; height: 100%; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 26px 28px; }
+  .card h3 { font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); font-weight: 600; margin-bottom: 18px; }
+  .krow { display: flex; justify-content: space-between; font-size: 25px; padding: 7px 0; }
+  .krow .k { color: var(--dim); }
+  .chips { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .chip { font-size: 18px; border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px; color: var(--dim); }
+  .gaugebox { display: flex; align-items: flex-end; gap: 34px; height: 560px; align-self: center; padding-left: 40px; }
+  .track { position: relative; width: 88px; height: 100%; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; transform-origin: bottom; transform: scaleY(.468);
+    background: linear-gradient(180deg, var(--teal), #0f766e); }
+  .trig { position: absolute; left: 0; right: 0; bottom: 40%; height: 0; border-top: 3px dashed var(--amber); }
+  .targ { position: absolute; left: 0; right: 0; bottom: 76%; height: 0; border-top: 2px dashed rgba(45,212,191,.5); }
+  .glabels { position: relative; width: 160px; height: 100%; }
+  .glab { position: absolute; left: 0; white-space: nowrap; font-size: 20px; transform: translateY(50%); }
+  .glab.a { color: var(--amber); } .glab.t { color: var(--teal); }
+  .hfread { display: flex; flex-direction: column; justify-content: flex-end; }
+  .hfnum { font-size: 96px; font-weight: 700; line-height: 1; }
+  .pill { margin-top: 16px; font-size: 22px; padding: 7px 18px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); width: fit-content; }
+  .log { display: flex; flex-direction: column; gap: 14px; }
+  .evt { border-left: 3px solid var(--line); padding: 10px 18px; }
+  .evt .tag { font-size: 15px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin-bottom: 3px; }
+  .evt .body { font-size: 24px; }
+  .ctable { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 21px; }
+  .ctable td, .ctable th { text-align: left; padding: 6px 12px; border-bottom: 1px solid var(--line); }
+  .ctable th { color: var(--faint); font-weight: 500; font-size: 16px; }
+  .ctable tr.win td { color: var(--teal); }
+  .memo { border: 1px solid rgba(45,212,191,.35); background: rgba(45,212,191,.06); border-radius: 10px; padding: 16px 18px; margin-top: 10px; font-size: 22px; }
+  .memo .who { color: var(--teal); font-size: 15px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 6px; }
+
+  /* proof (scene 5) */
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px; margin-top: 60px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 34px 36px; }
+  .stat .lab { font-size: 20px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .stat .val { font-size: 62px; font-weight: 700; margin-top: 14px; }
+  .txbar { margin-top: 40px; font-size: 26px; color: var(--dim); }
+  .txbar b { color: var(--ink); font-weight: 500; }
+</style>
+</head>
+<body>
+  <div id="root" data-composition-id="main" data-width="1920" data-height="1080" data-start="0" data-duration="66">
+
+    <!-- SCENE 1 — TITLE -->
+    <div id="s1" class="scene">
+      <div class="glow" style="width:900px;height:900px;background:var(--amber);left:-160px;top:-220px"></div>
+      <div style="height:100%;display:flex;flex-direction:column;justify-content:center">
+        <div id="s1-mark" class="sans" style="font-size:150px;font-weight:800;letter-spacing:-.02em">
+          <span class="amber">■</span> FIREBREAK
+        </div>
+        <div id="s1-line" class="fbline" style="width:640px;margin:38px 0 34px;transform-origin:left"></div>
+        <div id="s1-tag" class="lead" style="font-size:38px;max-width:42ch">the liquidation firewall for stablecoin-native lending on Arc.</div>
+        <div id="s1-sub" class="kicker" style="margin-top:40px">non-custodial · autonomous · settled in USDC</div>
+      </div>
+    </div>
+
+    <!-- SCENE 2 — PROBLEM -->
+    <div id="s2" class="scene">
+      <div class="glow" style="width:820px;height:820px;background:var(--ember);right:-200px;bottom:-220px"></div>
+      <div style="height:100%;display:flex;flex-direction:column;justify-content:center;gap:36px">
+        <div id="s2-k" class="kicker">the problem</div>
+        <div id="s2-h" class="h1 sans" style="max-width:20ch">Liquidation doesn't flash-crash.<br /><span class="ember">It drifts.</span></div>
+        <div id="s2-p" class="lead" style="max-width:44ch;font-size:32px">
+          FX and tokenized-RWA collateral slide slowly past the line. A liquidator bot is already waiting — and takes a <span class="ember">5–10% penalty</span> out of the borrower's collateral. Nobody's watching at 3am.
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 3 — MANDATE -->
+    <div id="s3" class="scene">
+      <div class="glow" style="width:760px;height:760px;background:var(--amber);left:40%;top:-260px"></div>
+      <div style="height:100%;display:flex;flex-direction:column;justify-content:center;gap:40px">
+        <div id="s3-k" class="kicker">the fix</div>
+        <div id="s3-h" class="h1 sans" style="max-width:22ch">The borrower signs an on-chain <span class="amber">Mandate</span>.</div>
+        <div id="s3-card" class="card" style="max-width:900px">
+          <h3>Bounded · Conditional · Non-custodial</h3>
+          <div class="krow"><span class="k">act only when</span><span>health factor &lt; <span class="amber">1.20</span></span></div>
+          <div class="krow"><span class="k">never spend more than</span><span>50 USDC / rescue</span></div>
+          <div class="krow"><span class="k">only these actions</span></div>
+          <div class="chips"><span class="chip">DELEVERAGE</span><span class="chip">ROTATE</span><span class="chip">TOP-UP</span></div>
+        </div>
+        <div id="s3-p" class="lead" style="font-size:28px;max-width:48ch">An autonomous keeper watches the loan and rescues it in one atomic transaction — before liquidators can move.</div>
+      </div>
+    </div>
+
+    <!-- SCENE 4 — THE RESCUE (dashboard) -->
+    <div id="s4" class="scene" style="padding:70px 90px">
+      <div class="dash">
+        <div style="display:flex;flex-direction:column;gap:26px;justify-content:center">
+          <div id="s4-pos" class="card">
+            <h3>Position</h3>
+            <div class="krow"><span class="k">mEURC</span><span>1000 · $1080</span></div>
+            <div class="krow"><span class="k">debt</span><span>700 USDC</span></div>
+          </div>
+          <div id="s4-man" class="card">
+            <h3>Mandate</h3>
+            <div class="krow"><span class="k">trigger</span><span>1.20</span></div>
+            <div class="krow"><span class="k">spend cap</span><span>5000 USDC</span></div>
+            <div class="chips"><span class="chip">DELEVERAGE</span><span class="chip">ROTATE</span><span class="chip">TOP-UP</span></div>
+          </div>
+        </div>
+
+        <div class="gaugebox">
+          <div class="track">
+            <div id="s4-fill" class="fill"></div>
+            <div class="trig"></div>
+            <div class="targ"></div>
+          </div>
+          <div class="glabels">
+            <div class="glab a" style="bottom:40%">— trigger 1.20</div>
+            <div class="glab t" style="bottom:76%">— target 1.38</div>
+          </div>
+          <div class="hfread">
+            <div id="s4-hfnum" class="hfnum">1.234</div>
+            <div id="s4-pill" class="pill teal">Healthy</div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;justify-content:center">
+          <h3 style="font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:16px">Keeper</h3>
+          <div class="log">
+            <div id="s4-e1" class="evt" style="opacity:0"><div class="tag">monitor</div><div class="body">HF <b class="amber">1.120</b> &lt; trigger 1.20 — Mandate armed</div></div>
+            <div id="s4-e2" class="evt" style="opacity:0"><div class="tag">strategist</div><div class="body">3 viable paths, sized to target 1.38
+              <table class="ctable"><tr><th>path</th><th>cost</th></tr>
+              <tr class="win"><td>TOP-UP</td><td>0.00 USDC</td></tr>
+              <tr><td>ROTATE</td><td>2.38 USDC</td></tr>
+              <tr><td>DELEVERAGE</td><td>309 USDC</td></tr></table></div></div>
+            <div id="s4-e3" class="evt" style="opacity:0"><div class="tag">claude</div><div class="body">ranked the vetted paths → chose <b class="teal">TOP-UP</b>
+              <div class="memo"><div class="who">Claude memo</div>Top-up restores health at zero cost — no swap, no slippage, no collateral sold — keeping the full position intact.</div></div></div>
+            <div id="s4-e4" class="evt" style="opacity:0"><div class="tag">executor</div><div class="body">rescued on-chain · spent <b>131.88 USDC</b> from reserve</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 5 — PROOF -->
+    <div id="s5" class="scene">
+      <div class="glow" style="width:820px;height:820px;background:var(--teal);left:-180px;bottom:-240px"></div>
+      <div style="height:100%;display:flex;flex-direction:column;justify-content:center">
+        <div id="s5-k" class="kicker">not a mockup</div>
+        <div id="s5-h" class="h1 sans" style="margin-top:20px">Real. On <span class="teal">Arc testnet</span>.</div>
+        <div class="stats">
+          <div id="s5-a" class="stat"><div class="lab">health factor</div><div class="val"><span class="ember">1.120</span> → <span class="teal">1.380</span></div></div>
+          <div id="s5-b" class="stat"><div class="lab">spent</div><div class="val">0.94 <span style="font-size:34px;color:var(--dim)">USDC</span></div></div>
+          <div id="s5-c" class="stat"><div class="lab">chosen by Claude</div><div class="val teal">TOP-UP</div></div>
+        </div>
+        <div id="s5-tx" class="txbar">tx <b>0x6041…9869</b> · verified on <span class="teal">testnet.arcscan.app</span></div>
+      </div>
+    </div>
+
+    <!-- SCENE 6 — CLOSE -->
+    <div id="s6" class="scene">
+      <div class="glow" style="width:900px;height:900px;background:var(--amber);right:-200px;top:-240px"></div>
+      <div style="height:100%;display:flex;flex-direction:column;justify-content:center;gap:34px">
+        <div id="s6-h" class="h2 sans" style="max-width:26ch">The LLM <span class="teal">ranks</span>. Deterministic code <span class="amber">sizes + bounds-checks</span>.</div>
+        <div id="s6-p" class="lead" style="font-size:28px;max-width:52ch">So the agent can only ever pick a path that's already sized, spend-capped, and whitelisted. Genuine autonomy — never an unbounded action.</div>
+        <div id="s6-mark" class="sans" style="font-size:96px;font-weight:800;margin-top:20px"><span class="amber">■</span> FIREBREAK</div>
+        <div id="s6-links" style="font-size:26px;color:var(--dim)">github.com/wanggang22/firebreak &nbsp;·&nbsp; firebreak-site.vercel.app</div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+window.__timelines = window.__timelines || {};
+var tl = gsap.timeline({ paused: true });
+
+// pct for the HF gauge: HF in [1.0,1.5] -> [0,1]
+function scy(hf){ return Math.max(0, Math.min(1, (hf-1.0)/0.5)); }
+
+/* ---- SCENE 1 (0-7.5) ---- */
+tl.from("#s1-mark", { y: 70, opacity: 0, duration: 0.9, ease: "power3.out" }, 0.3);
+tl.from("#s1-line", { scaleX: 0, duration: 0.8, ease: "expo.out" }, 0.8);
+tl.from("#s1-tag", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 1.1);
+tl.from("#s1-sub", { opacity: 0, duration: 0.7, ease: "power2.out" }, 1.5);
+
+/* ---- crossfade 1->2 at 7.2 ---- */
+tl.to("#s1", { opacity: 0, duration: 0.7, ease: "power2.inOut" }, 7.2);
+tl.to("#s2", { opacity: 1, duration: 0.7, ease: "power2.inOut" }, 7.2);
+/* SCENE 2 (7.5-18.2) */
+tl.from("#s2-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 7.6);
+tl.from("#s2-h", { y: 50, opacity: 0, duration: 0.8, ease: "expo.out" }, 7.9);
+tl.from("#s2-p", { y: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 8.5);
+
+/* ---- crossfade 2->3 at 18.0 ---- */
+tl.to("#s2", { opacity: 0, duration: 0.7, ease: "power2.inOut" }, 18.0);
+tl.to("#s3", { opacity: 1, duration: 0.7, ease: "power2.inOut" }, 18.0);
+/* SCENE 3 (18.3-29.0) */
+tl.from("#s3-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 18.4);
+tl.from("#s3-h", { y: 50, opacity: 0, duration: 0.8, ease: "expo.out" }, 18.7);
+tl.from("#s3-card", { y: 46, opacity: 0, duration: 0.7, ease: "power3.out" }, 19.4);
+tl.from("#s3-card .chip", { y: 20, opacity: 0, duration: 0.4, stagger: 0.12, ease: "power2.out" }, 20.0);
+tl.from("#s3-p", { y: 30, opacity: 0, duration: 0.7, ease: "power2.out" }, 20.6);
+
+/* ---- crossfade 3->4 at 28.8 ---- */
+tl.to("#s3", { opacity: 0, duration: 0.7, ease: "power2.inOut" }, 28.8);
+tl.to("#s4", { opacity: 1, duration: 0.7, ease: "power2.inOut" }, 28.8);
+/* SCENE 4 (29.1-49.0) — the rescue */
+tl.from("#s4-pos", { x: -40, opacity: 0, duration: 0.6, ease: "power3.out" }, 29.2);
+tl.from("#s4-man", { x: -40, opacity: 0, duration: 0.6, ease: "power3.out" }, 29.4);
+tl.from(".gaugebox", { opacity: 0, duration: 0.6, ease: "power2.out" }, 29.6);
+// hold healthy, then DRIFT down across the trigger (31.0 -> 33.0)
+var hfProxy = { v: 1.234 };
+tl.to("#s4-fill", { scaleY: scy(1.120), duration: 2.0, ease: "power1.inOut" }, 31.2);
+tl.to(hfProxy, { v: 1.120, duration: 2.0, ease: "power1.inOut",
+  onUpdate: function(){ document.getElementById("s4-hfnum").textContent = hfProxy.v.toFixed(3); } }, 31.2);
+tl.to("#s4-fill", { background: "linear-gradient(180deg, #f97316, #f59e0b)", duration: 0.5 }, 32.4);
+tl.to("#s4-pill", { color: "#f59e0b", borderColor: "rgba(245,158,11,.5)", duration: 0.3,
+  onStart: function(){ document.getElementById("s4-pill").textContent = "At risk"; } }, 32.6);
+// keeper log streams
+tl.fromTo("#s4-e1", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 33.4);
+tl.fromTo("#s4-e2", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 34.8);
+tl.fromTo("#s4-e3", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 37.6);
+tl.fromTo("#s4-e4", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 41.2);
+// RESTORE: gauge snaps up to target, number ticks up, pill teal
+var hfUp = { v: 1.120 };
+tl.to("#s4-fill", { scaleY: scy(1.380), background: "linear-gradient(180deg, #2dd4bf, #0f766e)", duration: 1.0, ease: "power3.out" }, 42.6);
+tl.to(hfUp, { v: 1.380, duration: 1.0, ease: "power3.out",
+  onUpdate: function(){ document.getElementById("s4-hfnum").textContent = hfUp.v.toFixed(3); } }, 42.6);
+tl.to("#s4-pill", { color: "#2dd4bf", borderColor: "rgba(45,212,191,.5)", duration: 0.3,
+  onStart: function(){ document.getElementById("s4-pill").textContent = "Rescued"; } }, 43.2);
+
+/* ---- crossfade 4->5 at 48.6 ---- */
+tl.to("#s4", { opacity: 0, duration: 0.7, ease: "power2.inOut" }, 48.6);
+tl.to("#s5", { opacity: 1, duration: 0.7, ease: "power2.inOut" }, 48.6);
+/* SCENE 5 (48.9-59.0) — proof */
+tl.from("#s5-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 49.0);
+tl.from("#s5-h", { y: 50, opacity: 0, duration: 0.8, ease: "expo.out" }, 49.3);
+tl.from("#s5-a", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" }, 50.0);
+tl.from("#s5-b", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" }, 50.2);
+tl.from("#s5-c", { y: 40, opacity: 0, duration: 0.6, ease: "power3.out" }, 50.4);
+tl.from("#s5-tx", { opacity: 0, duration: 0.7, ease: "power2.out" }, 51.0);
+
+/* ---- crossfade 5->6 at 58.8 ---- */
+tl.to("#s5", { opacity: 0, duration: 0.7, ease: "power2.inOut" }, 58.8);
+tl.to("#s6", { opacity: 1, duration: 0.7, ease: "power2.inOut" }, 58.8);
+/* SCENE 6 (59.1-66) — close */
+tl.from("#s6-h", { y: 46, opacity: 0, duration: 0.8, ease: "expo.out" }, 59.2);
+tl.from("#s6-p", { y: 34, opacity: 0, duration: 0.7, ease: "power3.out" }, 59.9);
+tl.from("#s6-mark", { y: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 60.6);
+tl.from("#s6-links", { opacity: 0, duration: 0.7, ease: "power2.out" }, 61.2);
+
+window.__timelines["main"] = tl;
+</script>
+</body>
+</html>
