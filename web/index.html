@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Firebreak — liquidation firewall on Arc</title>
+<meta name="description" content="A non-custodial liquidation firewall on Arc. Watch an autonomous keeper — Claude ranks the vetted rescue paths — save a loan before liquidators can move. Replay of a real Arc testnet rescue." />
+<style>
+  :root {
+    --bg: #09090b; --panel: #111113; --panel-2: #161619; --line: #26262b;
+    --ink: #e4e4e7; --dim: #8b8b93; --faint: #5b5b63;
+    --amber: #f59e0b; --amber-2: #f97316; --teal: #2dd4bf; --red: #ef4444;
+    --mono: "Geist Mono", ui-monospace, "SF Mono", "IBM Plex Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--mono);
+    font-variant-numeric: tabular-nums; line-height: 1.45; padding: 24px; }
+  a { color: var(--teal); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  header { display: flex; align-items: baseline; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 8px; }
+  .brand { font-weight: 600; letter-spacing: 0.04em; font-size: 18px; }
+  .brand b { color: var(--amber); }
+  .tagline { color: var(--dim); font-size: 13px; margin-left: 10px; }
+  .badge { font-size: 12px; color: var(--dim); border: 1px solid var(--line);
+    border-radius: 4px; padding: 4px 8px; }
+  .intro { color: var(--dim); font-size: 13px; margin: 14px 0 20px; max-width: 72ch; }
+  .intro b { color: var(--ink); font-weight: 600; }
+  .grid { display: grid; grid-template-columns: 290px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  .panel h2 { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--faint); font-weight: 600; margin-bottom: 12px; }
+  .row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 14px; gap: 10px; }
+  .row .k { color: var(--dim); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .chip { font-size: 11px; border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; color: var(--dim); }
+  .stack { display: grid; gap: 18px; }
+  .controls { display: flex; gap: 10px; margin-top: 4px; }
+  button { font-family: var(--mono); font-size: 13px; cursor: pointer; border-radius: 6px;
+    padding: 9px 16px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); transition: opacity .15s; }
+  button.primary { background: var(--amber); color: #1a1206; border-color: var(--amber); font-weight: 600; }
+  button:disabled { opacity: .45; cursor: default; }
+  .muted { color: var(--faint); font-size: 12px; }
+  .gauge { position: relative; height: 220px; display: flex; align-items: flex-end; gap: 22px; padding: 10px 4px 0 64px; }
+  .track { position: relative; width: 46px; height: 100%; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .fill { position: absolute; left: 0; right: 0; bottom: 0; transform-origin: bottom; height: 100%;
+    background: linear-gradient(180deg, var(--teal), #0f766e);
+    transition: transform 1.1s cubic-bezier(.4,0,.2,1), background .5s; }
+  .fill.risk { background: linear-gradient(180deg, var(--amber-2), var(--amber)); }
+  .line { position: absolute; left: -4px; right: -4px; height: 0; border-top: 2px dashed var(--amber); transition: opacity .3s; }
+  .line.target { border-top-color: rgba(45,212,191,.5); }
+  .line span { position: absolute; right: 100%; margin-right: 8px; white-space: nowrap; font-size: 11px; color: var(--amber); transform: translateY(-50%); }
+  .line.target span { color: var(--teal); }
+  .readout { display: flex; flex-direction: column; justify-content: flex-end; }
+  .hf-num { font-size: 46px; font-weight: 600; line-height: 1; }
+  .pill { display: inline-block; margin-top: 10px; font-size: 12px; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--dim); width: fit-content; }
+  .pill.healthy, .pill.rescued { color: var(--teal); border-color: rgba(45,212,191,.4); }
+  .pill.at_risk, .pill.rescuing { color: var(--amber); border-color: rgba(245,158,11,.4); }
+  .log { display: grid; gap: 8px; font-size: 13px; min-height: 40px; }
+  .evt { border-left: 2px solid var(--line); padding: 6px 12px; opacity: 0; transform: translateY(6px); animation: rise .35s forwards; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  .evt .tag { color: var(--faint); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
+  .evt b { color: var(--amber); }
+  table.cand { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12.5px; }
+  table.cand td, table.cand th { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+  table.cand th { color: var(--faint); font-weight: 500; font-size: 11px; }
+  tr.chosen td { color: var(--teal); }
+  .memo { border: 1px solid rgba(45,212,191,.35); background: rgba(45,212,191,.05); border-radius: 6px;
+    padding: 12px; margin-top: 8px; font-size: 13px; color: var(--ink); }
+  .memo .who { color: var(--teal); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 4px; }
+  footer { color: var(--faint); font-size: 12px; margin-top: 26px; border-top: 1px solid var(--line); padding-top: 14px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <span class="brand">■ <b>FIREBREAK</b></span>
+        <span class="tagline">the line the fire can't cross</span>
+      </div>
+      <a class="badge" id="tn-badge" target="_blank" rel="noopener">● Arc testnet · verified ↗</a>
+    </header>
+    <p class="intro">
+      A <b>non-custodial liquidation firewall</b> for stablecoin-native lending on Arc. A borrower signs an
+      on-chain <b>Mandate</b> (health trigger, spend cap, action whitelist); an autonomous keeper watches the
+      loan and, before liquidators can move, executes the cheapest bounded rescue in one atomic transaction.
+      Below is a <b>replay of a real rescue executed on Arc testnet</b> — every number and the transaction are
+      on-chain and verifiable. <span class="muted">Claude ranks the vetted paths; sizing, spend cap, and the
+      action whitelist stay deterministic, so the model can only pick a bounds-checked path.</span>
+    </p>
+
+    <div class="grid">
+      <div class="stack">
+        <div class="panel" id="position"><h2>Position</h2></div>
+        <div class="panel" id="mandate"><h2>Mandate</h2></div>
+        <div class="controls"><button class="primary" id="btn-play">▶ Replay the rescue</button></div>
+      </div>
+      <div class="stack">
+        <div class="panel">
+          <h2>Health Factor <span class="muted" id="stage-tag">· Arc testnet (verified replay)</span></h2>
+          <div id="gauge"></div>
+        </div>
+        <div class="panel"><h2>Keeper</h2><div id="log" class="log"></div></div>
+        <div class="panel" id="proof"><h2>On-chain proof</h2></div>
+      </div>
+    </div>
+
+    <footer>
+      Replay of tx <a id="tx-link" target="_blank" rel="noopener"></a> on Arc testnet (chainId 5042002).
+      Source + contracts: <a href="https://github.com/wanggang22/firebreak" target="_blank" rel="noopener">github.com/wanggang22/firebreak</a>.
+      Run it live yourself: <span class="muted">npm run demo:server</span>.
+    </footer>
+  </div>
+
+<script>
+// Baked from agent/evidence/run-testnet-001.json — a real Arc testnet rescue.
+const EV = {
+  network: "arc-testnet (chainId 5042002)",
+  trigger: 1.20, target: 1.38, healthyStart: 1.728,
+  position: { symbol: "mEURC", amount: 10, valueUsd: 10.8, debt: 5.0 },
+  mandate: { trigger: 1.20, spendCap: 50, reserve: 1.0, allowed: ["DELEVERAGE", "ROTATE", "TOPUP"] },
+  viable: [
+    { action: "TOP-UP", cost: 0.00, why: "0.94 USDC from reserve (no swap, no slippage, no collateral sold)" },
+    { action: "ROTATE", cost: 0.00, why: "7.00 USDC of mEURC(LT 0.80) → mTBILL(LT 0.90)" },
+    { action: "DELEVERAGE", cost: 0.36, why: "sell 2.24 USDC of mEURC, repay debt" },
+  ],
+  chosen: "TOP-UP",
+  memo: "TOP-UP restores health from your prepaid reserve with no swap, no slippage, and no collateral sold, at zero cost now — the cheapest durable fix versus rotating (two swap fees) or deleveraging (0.36 USDC and a permanently smaller position).",
+  result: { hfBefore: 1.120, hfAfter: 1.380, spent: "0.94 USDC" },
+  tx: "0x6041d281b4d37ae7e599787478e6edb008cc6606a9b7483dd37503105d4d9869",
+  txUrl: "https://testnet.arcscan.app/tx/0x6041d281b4d37ae7e599787478e6edb008cc6606a9b7483dd37503105d4d9869",
+  mandateUrl: "https://testnet.arcscan.app/address/0x529D2257dc8BEEA14D02FBc6123a079C08596915",
+};
+
+const $ = (id) => document.getElementById(id);
+const LO = 1.0, HI = 1.8;
+const pct = (hf) => Math.max(0, Math.min(1, (hf - LO) / (HI - LO)));
+
+function renderPosition(p) {
+  $("position").innerHTML = `<h2>Position</h2>
+    <div class="row"><span class="k">${p.symbol}</span><span>${p.amount} · $${p.valueUsd.toFixed(1)}</span></div>
+    <div class="row"><span class="k">debt</span><span>${p.debt.toFixed(2)} USDC</span></div>`;
+}
+function renderMandate(m) {
+  $("mandate").innerHTML = `<h2>Mandate</h2>
+    <div class="row"><span class="k">trigger</span><span>${m.trigger.toFixed(2)}</span></div>
+    <div class="row"><span class="k">spend cap</span><span>${m.spendCap} USDC</span></div>
+    <div class="row"><span class="k">reserve</span><span>${m.reserve.toFixed(2)} USDC</span></div>
+    <div class="row"><span class="k">actions</span></div>
+    <div class="chips">${m.allowed.map((a) => `<span class="chip">${a}</span>`).join("")}</div>`;
+}
+function renderGauge(hf, phase) {
+  const trigH = (pct(EV.trigger) * 100).toFixed(1);
+  const targH = (pct(EV.target) * 100).toFixed(1);
+  const risk = hf < EV.trigger ? "risk" : "";
+  const labels = { healthy: "Healthy", at_risk: "At risk", rescuing: "Rescuing…", rescued: "Rescued" };
+  $("gauge").innerHTML = `<div class="gauge">
+      <div class="track">
+        <div class="fill ${risk}" style="transform: scaleY(${pct(hf).toFixed(3)})"></div>
+        <div class="line" style="bottom:${trigH}%"><span>trigger ${EV.trigger.toFixed(2)}</span></div>
+        <div class="line target" style="bottom:${targH}%"><span>target ${EV.target.toFixed(2)}</span></div>
+      </div>
+      <div class="readout">
+        <div class="hf-num">${hf.toFixed(3)}</div>
+        <div class="pill ${phase}">${labels[phase] || phase}</div>
+      </div>
+    </div>`;
+}
+function addEvt(tag, html) {
+  const d = document.createElement("div");
+  d.className = "evt";
+  d.innerHTML = `<div class="tag">${tag}</div>${html}`;
+  $("log").appendChild(d);
+}
+function candTable() {
+  const rows = EV.viable.map((c) =>
+    `<tr class="${c.action === EV.chosen ? "chosen" : ""}"><td>${c.action}</td><td>${c.cost.toFixed(2)} USDC</td><td>${c.why}</td></tr>`).join("");
+  return `<table class="cand"><tr><th>path</th><th>cost</th><th>detail</th></tr>${rows}</table>`;
+}
+function renderProof() {
+  $("tn-badge").href = EV.txUrl;
+  $("tx-link").href = EV.txUrl;
+  $("tx-link").textContent = EV.tx.slice(0, 14) + "…";
+  $("proof").innerHTML = `<h2>On-chain proof <span class="muted">· verified</span></h2>
+    <div class="row"><span class="k">network</span><span>${EV.network}</span></div>
+    <div class="row"><span class="k">rescue</span><span>HF ${EV.result.hfBefore.toFixed(3)} → ${EV.result.hfAfter.toFixed(3)} · ${EV.result.spent}</span></div>
+    <div class="row"><span class="k">chosen by Claude</span><span>${EV.chosen}</span></div>
+    <div class="row"><span class="k">tx</span><a href="${EV.txUrl}" target="_blank" rel="noopener">${EV.tx.slice(0, 12)}… ↗</a></div>
+    <div class="row"><span class="k">mandate</span><a href="${EV.mandateUrl}" target="_blank" rel="noopener">0x529D…6915 ↗</a></div>`;
+}
+
+let timers = [];
+const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+function reset() {
+  timers.forEach(clearTimeout); timers = [];
+  $("log").innerHTML = "";
+  renderGauge(EV.healthyStart, "healthy");
+}
+function play() {
+  reset();
+  $("btn-play").disabled = true;
+  at(600, () => addEvt("monitor", `watching Alice's loan · HF ${EV.healthyStart.toFixed(3)}`));
+  at(1400, () => { renderGauge(EV.result.hfBefore, "at_risk"); });
+  at(1600, () => addEvt("oracle", `FX drift · mEURC re-priced down`));
+  at(2600, () => addEvt("monitor", `HF <b>${EV.result.hfBefore.toFixed(3)}</b> &lt; trigger ${EV.trigger.toFixed(2)} — Mandate armed`));
+  at(3600, () => addEvt("strategist", `${EV.viable.length} viable paths sized to target ${EV.target.toFixed(2)}` + candTable()));
+  at(5100, () => addEvt("claude", `ranked the vetted paths, chose <b>${EV.chosen}</b>` +
+    `<div class="memo"><div class="who">Claude memo</div>${EV.memo}</div>`));
+  at(6500, () => addEvt("executor", `tx <b>${EV.tx.slice(0, 10)}…</b> · spent ${EV.result.spent} <a href="${EV.txUrl}" target="_blank" rel="noopener">arcscan ↗</a>`));
+  at(7500, () => { renderGauge(EV.result.hfAfter, "rescued"); addEvt("restored", `HF ${EV.result.hfBefore.toFixed(3)} → <b>${EV.result.hfAfter.toFixed(3)}</b> — loan safe`); });
+  at(8200, () => { $("btn-play").disabled = false; });
+}
+
+renderPosition(EV.position);
+renderMandate(EV.mandate);
+renderProof();
+renderGauge(EV.healthyStart, "healthy");
+$("btn-play").onclick = play;
+at(700, play);
+</script>
+</body>
+</html>
