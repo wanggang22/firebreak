@@ -1,0 +1,38 @@
+{
+  "note": "LLM in the loop: Claude (claude-opus-4-8) ranked the vetted rescue paths and the executor sent its choice to a live EVM. The deterministic core sized every path and enforced the spend cap + action whitelist BEFORE ranking, so the model's only freedom was which safe path to take.",
+  "network": "arc-testnet (chainId 5042002)",
+  "user": "0x20E40d46631026891D89CA1d33a94073D561B23B",
+  "scenario": "mEURC collateral, USDC debt; EURC drifts down until HF crosses the Mandate trigger",
+  "trigger": "1.200",
+  "target": "1.380",
+  "model": "claude-opus-4-8",
+  "ranking": {
+    "viablePaths": [
+      {
+        "action": "TOPUP",
+        "why": "TOP-UP 0.94 USDC from reserve (no swap, no slippage, no collateral sold)",
+        "costUsdc": "0.00"
+      },
+      {
+        "action": "ROTATE",
+        "why": "ROTATE 7.00 USDC of mEURC(LT 0.800) → mTBILL(LT 0.900)",
+        "costUsdc": "0.00"
+      },
+      {
+        "action": "DELEVERAGE",
+        "why": "DELEVERAGE: sell 2.24 USDC of mEURC, repay debt",
+        "costUsdc": "0.36"
+      }
+    ],
+    "chosenAction": "TOPUP",
+    "memo": "HF 1.120 < trigger 1.200. Target 1.380. Debt 5.00 USDC. Candidates: TOP-UP, ROTATE, DELEVERAGE. LLM ranked 3 viable paths and chose TOP-UP 0.94 USDC from reserve (no swap, no slippage, no collateral sold) (cost 0.00 USDC). Reason: TOP-UP restores health from your prepaid reserve with no swap, no slippage, and no collateral sold, at zero cost now — the cheapest durable fix versus rotating (two swap fees) or deleveraging (0.36 USDC and a permanently smaller position)."
+  },
+  "result": {
+    "hfBefore": "1.120",
+    "hfAfter": "1.380",
+    "spent": "0.94 USDC",
+    "txHash": "0x6041d281b4d37ae7e599787478e6edb008cc6606a9b7483dd37503105d4d9869",
+    "explorerUrl": "https://testnet.arcscan.app/tx/0x6041d281b4d37ae7e599787478e6edb008cc6606a9b7483dd37503105d4d9869",
+    "hfVerifiedOnChainAfter": "1.380 (independent readContract)"
+  }
+}

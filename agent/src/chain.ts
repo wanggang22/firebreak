@@ -23,12 +23,24 @@ export function arcChain(): Chain {
   });
 }
 
+// Arc's public RPC caps request bursts (JSON-RPC -32011 "request limit reached").
+// Batch many eth_calls into single HTTP POSTs and retry hard so the keeper's
+// read-heavy monitor tick survives on the shared endpoint. Local anvil ignores
+// all of this (no limit), so the same client works for both.
+function transport() {
+  return http(process.env.RPC ?? ARC_TESTNET.rpc, {
+    batch: { wait: 16 }, // coalesce concurrent calls fired within 16ms
+    retryCount: 10,
+    retryDelay: 500,
+  });
+}
+
 export function publicClient() {
-  return createPublicClient({ chain: arcChain(), transport: http() });
+  return createPublicClient({ chain: arcChain(), transport: transport() });
 }
 
 export function walletFor(pk: `0x${string}`) {
-  return createWalletClient({ account: privateKeyToAccount(pk), chain: arcChain(), transport: http() });
+  return createWalletClient({ account: privateKeyToAccount(pk), chain: arcChain(), transport: transport() });
 }
 
 export const txUrl = (hash: string) => `${ARC_TESTNET.explorer}/tx/${hash}`;

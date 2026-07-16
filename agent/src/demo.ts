@@ -70,10 +70,10 @@ async function main() {
   const r = outcome.rescue;
   const chosenAction = ACTION_NAME[decodeChosen(outcome.memo)] ?? "?";
   const evidence = {
-    note: "LLM in the loop: Claude (claude-opus-4-8) ranked the vetted rescue paths and the executor sent its choice to a live EVM. The deterministic core sized every path and enforced the spend cap + action whitelist BEFORE ranking, so the model's only freedom was which safe path to take. This is run-local-001's rescue, now driven by the model instead of the cheapest-path rule.",
+    note: "LLM in the loop: Claude (claude-opus-4-8) ranked the vetted rescue paths and the executor sent its choice to a live EVM. The deterministic core sized every path and enforced the spend cap + action whitelist BEFORE ranking, so the model's only freedom was which safe path to take.",
     network: `${dep.network} (chainId ${process.env.CHAIN_ID ?? "?"})`,
     user: alice,
-    scenario: "1000 mEURC collateral, 700 USDC debt; EURC drifts 1.08 -> 0.98",
+    scenario: "mEURC collateral, USDC debt; EURC drifts down until HF crosses the Mandate trigger",
     trigger: wad(terms.hfTriggerWad),
     target: wad(set.target),
     model: "claude-opus-4-8",
@@ -89,12 +89,14 @@ async function main() {
       hfAfter: wad(r.hfAfter),
       spent: `${usdc(r.spent)} USDC`,
       txHash: r.txHash,
+      explorerUrl: r.url,
       hfVerifiedOnChainAfter: `${wad(hfVerified)} (independent readContract)`,
     },
   };
-  const out = new URL("../evidence/run-local-002.json", import.meta.url);
+  const outName = process.env.EVIDENCE ?? "run-local-002.json";
+  const out = new URL(`../evidence/${outName}`, import.meta.url);
   writeFileSync(out, JSON.stringify(evidence, null, 2));
-  console.log(`\n[demo] evidence → evidence/run-local-002.json`);
+  console.log(`\n[demo] evidence → evidence/${outName}`);
 }
 
 /** Pull the chosen ACTION id back out of the memo the strategist wrote. */

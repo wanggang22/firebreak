@@ -7,48 +7,81 @@ import { miniLendAbi, miniSwapAbi, oracleAbi, mandateAbi } from "./abi.ts";
 import type { Deployment } from "./config.ts";
 import type { Signals, Terms, Collateral, Address } from "./types.ts";
 
+/** Retry a read through the "request limit reached" (-32011) burst cap the
+ *  public Arc RPC returns as a 200-with-error (viem won't auto-retry those).
+ *  Exponential backoff; anvil never trips this so local runs pay nothing. */
+export async function rpcRetry<T>(fn: () => Promise<T>, tries = 8): Promise<T> {
+  let delay = 400;
+  for (let i = 0; ; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const msg = String((err as Error)?.message ?? err);
+      const limited = msg.includes("request limit") || msg.includes("-32011") || msg.includes("429");
+      if (!limited || i >= tries) throw err;
+      await new Promise((r) => setTimeout(r, delay));
+      delay = Math.min(delay * 2, 6000);
+    }
+  }
+}
+
+/** Run async jobs with a bounded concurrency, so we never fire more than
+ *  `limit` in-flight requests at the shared RPC. */
+async function mapLimit(jobs: Array<() => Promise<void>>, limit: number): Promise<void> {
+  let next = 0;
+  async function worker() {
+    while (next < jobs.length) {
+      const i = next++;
+      await jobs[i]();
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, jobs.length) }, worker));
+}
+
 export async function readSignals(dep: Deployment, user: Address): Promise<Signals> {
   const pc = publicClient();
   const [hf, debt] = await Promise.all([
-    pc.readContract({ address: dep.pool, abi: miniLendAbi, functionName: "healthFactor", args: [user] }),
-    pc.readContract({ address: dep.pool, abi: miniLendAbi, functionName: "debtOf", args: [user] }),
+    rpcRetry(() => pc.readContract({ address: dep.pool, abi: miniLendAbi, functionName: "healthFactor", args: [user] })),
+    rpcRetry(() => pc.readContract({ address: dep.pool, abi: miniLendAbi, functionName: "debtOf", args: [user] })),
   ]);
 
-  const collaterals: Collateral[] = await Promise.all(
-    dep.tokens.map(async (tm): Promise<Collateral> => {
-      const [amount, listing, price] = await Promise.all([
-        pc.readContract({ address: dep.pool, abi: miniLendAbi, functionName: "collateralOf", args: [user, tm.token] }),
-        pc.readContract({ address: dep.pool, abi: miniLendAbi, functionName: "listings", args: [tm.token] }),
-        pc.readContract({ address: dep.oracle, abi: oracleAbi, functionName: "getPrice", args: [tm.token] }),
-      ]);
-      return {
-        token: tm.token,
-        symbol: tm.symbol,
-        amount: amount as bigint,
-        priceWad: price as bigint,
-        ltWad: (listing as readonly [boolean, bigint, bigint])[2],
-        isStable: tm.isStable,
-      };
-    }),
-  );
+  const collaterals: Collateral[] = [];
+  for (const tm of dep.tokens) {
+    const [amount, listing, price] = await Promise.all([
+      rpcRetry(() => pc.readContract({ address: dep.pool, abi: miniLendAbi, functionName: "collateralOf", args: [user, tm.token] })),
+      rpcRetry(() => pc.readContract({ address: dep.pool, abi: miniLendAbi, functionName: "listings", args: [tm.token] })),
+      rpcRetry(() => pc.readContract({ address: dep.oracle, abi: oracleAbi, functionName: "getPrice", args: [tm.token] })),
+    ]);
+    collaterals.push(collateralFrom(tm, amount, listing, price));
+  }
+  return finishSignals(dep, user, hf as bigint, debt as bigint, collaterals);
+}
 
-  // live quoter — one synchronous view per call would be async; we pre-fetch a
-  // small cache keyed by (token, amount) lazily via a memoized async barrier.
-  // For the strategist's needs we expose a batched pre-quote instead: see below.
+function collateralFrom(
+  tm: { token: Address; symbol: string; isStable: boolean },
+  amount: unknown, listing: unknown, price: unknown,
+): Collateral {
+  return {
+    token: tm.token,
+    symbol: tm.symbol,
+    amount: amount as bigint,
+    priceWad: price as bigint,
+    ltWad: (listing as readonly [boolean, bigint, bigint])[2],
+    isStable: tm.isStable,
+  };
+}
+
+async function finishSignals(dep: Deployment, user: Address, hf: bigint, debt: bigint, collaterals: Collateral[]): Promise<Signals> {
   const quoteUsdcOut = makeCachedQuoter(dep, collaterals);
-
-  // warm the cache for the amounts the strategist will probe (each collateral's
-  // full balance is the upper bound it considers).
   await quoteUsdcOut.warm();
-
-  return { user, hf: hf as bigint, debt: debt as bigint, collaterals, quoteUsdcOut: quoteUsdcOut.fn };
+  return { user, hf, debt, collaterals, quoteUsdcOut: quoteUsdcOut.fn };
 }
 
 export async function readTerms(dep: Deployment, user: Address): Promise<Terms> {
   const pc = publicClient();
-  const res = (await pc.readContract({
+  const res = (await rpcRetry(() => pc.readContract({
     address: dep.mandate, abi: mandateAbi, functionName: "mandateOf", args: [user],
-  })) as readonly [
+  }))) as readonly [
     { pool: Address; swapVenue: Address; keeper: Address; hfTrigger: bigint; maxSpendPerRescue: bigint; allowedActions: number },
     boolean,
     bigint,
@@ -70,21 +103,26 @@ function makeCachedQuoter(dep: Deployment, cs: Collateral[]) {
   const cache = new Map<string, bigint>();
   const key = (t: Address, a: bigint) => `${t}:${a}`;
 
+  // Probe grid: 20 fractions per token. Coarser than before so the shared Arc
+  // RPC isn't flooded; the constant-product curve is smooth enough that snapping
+  // to the nearest 5%-step probe keeps the sizing well inside slippage tolerance.
+  const STEPS = 20;
+
   async function warm() {
-    // probe each token at a range of fractions of the user's balance
-    const probes: Array<Promise<void>> = [];
+    const jobs: Array<() => Promise<void>> = [];
     for (const c of cs) {
-      for (let i = 1; i <= 100; i++) {
-        const amt = (c.amount * BigInt(i)) / 100n;
+      for (let i = 1; i <= STEPS; i++) {
+        const amt = (c.amount * BigInt(i)) / BigInt(STEPS);
         if (amt === 0n) continue;
-        probes.push(
-          pc
-            .readContract({ address: dep.amm, abi: miniSwapAbi, functionName: "getUsdcOut", args: [c.token, amt] })
-            .then((out) => { cache.set(key(c.token, amt), out as bigint); }),
-        );
+        jobs.push(async () => {
+          const out = (await rpcRetry(() =>
+            pc.readContract({ address: dep.amm, abi: miniSwapAbi, functionName: "getUsdcOut", args: [c.token, amt] }),
+          )) as bigint;
+          cache.set(key(c.token, amt), out);
+        });
       }
     }
-    await Promise.all(probes);
+    await mapLimit(jobs, 4); // ≤4 concurrent calls — under the RPC burst cap
   }
 
   // Synchronous lookup: snap the requested amount to the nearest warmed probe.
@@ -93,8 +131,8 @@ function makeCachedQuoter(dep: Deployment, cs: Collateral[]) {
     if (!c || c.amount === 0n) return 0n;
     let bestK = "";
     let bestDiff = -1n;
-    for (let i = 1; i <= 100; i++) {
-      const probe = (c.amount * BigInt(i)) / 100n;
+    for (let i = 1; i <= STEPS; i++) {
+      const probe = (c.amount * BigInt(i)) / BigInt(STEPS);
       const diff = probe > amt ? probe - amt : amt - probe;
       if (bestDiff < 0n || diff < bestDiff) { bestDiff = diff; bestK = key(token, probe); }
     }
