@@ -1,0 +1,37 @@
+{
+  "note": "LLM in the loop: Claude (claude-opus-4-8) ranked the vetted rescue paths and the executor sent its choice to a live EVM. The deterministic core sized every path and enforced the spend cap + action whitelist BEFORE ranking, so the model's only freedom was which safe path to take. This is run-local-001's rescue, now driven by the model instead of the cheapest-path rule.",
+  "network": "anvil-local (chainId 31337)",
+  "user": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+  "scenario": "1000 mEURC collateral, 700 USDC debt; EURC drifts 1.08 -> 0.98",
+  "trigger": "1.200",
+  "target": "1.380",
+  "model": "claude-opus-4-8",
+  "ranking": {
+    "viablePaths": [
+      {
+        "action": "TOPUP",
+        "why": "TOP-UP 131.88 USDC from reserve (no swap, no slippage, no collateral sold)",
+        "costUsdc": "0.00"
+      },
+      {
+        "action": "ROTATE",
+        "why": "ROTATE 980.00 USDC of mEURC(LT 0.800) → mTBILL(LT 0.900)",
+        "costUsdc": "2.38"
+      },
+      {
+        "action": "DELEVERAGE",
+        "why": "DELEVERAGE: sell 313.79 USDC of mEURC, repay debt",
+        "costUsdc": "309.04"
+      }
+    ],
+    "chosenAction": "TOPUP",
+    "memo": "HF 1.120 < trigger 1.200. Target 1.380. Debt 700.00 USDC. Candidates: TOP-UP, ROTATE, DELEVERAGE. LLM ranked 3 viable paths and chose TOP-UP 131.88 USDC from reserve (no swap, no slippage, no collateral sold) (cost 0.00 USDC). Reason: The top-up restores your health factor at zero cost with no swap fees, no slippage, and no collateral sold — the cheapest and least disruptive fix available. It draws only a small amount from your prepaid reserve while keeping your full market position intact."
+  },
+  "result": {
+    "hfBefore": "1.120",
+    "hfAfter": "1.380",
+    "spent": "131.88 USDC",
+    "txHash": "0x395b17960df2c7001b94d0b69584a0935a9ddbf07214ef1c1549bbd3cd57d531",
+    "hfVerifiedOnChainAfter": "1.380 (independent readContract)"
+  }
+}
