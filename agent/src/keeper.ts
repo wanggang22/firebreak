@@ -4,7 +4,7 @@
 // reasoning memo and the resulting health improvement as evidence.
 
 import { readSignals, readTerms } from "./monitor.ts";
-import { decide } from "./strategist.ts";
+import { decide, decideWith, type Ranker } from "./strategist.ts";
 import { executeRescue, type RescueResult } from "./executor.ts";
 import type { Deployment } from "./config.ts";
 import type { Address } from "./types.ts";
@@ -17,18 +17,20 @@ export interface KeeperOutcome {
   rescue?: RescueResult;
 }
 
-/** One evaluation tick for one user. Returns what happened (for evidence). */
+/** One evaluation tick for one user. Returns what happened (for evidence).
+ *  Pass `ranker` (e.g. makeClaudeRanker()) to have the LLM rank the vetted
+ *  paths; omit it for the pure rule-based cheapest-path decision. */
 export async function tick(
   dep: Deployment,
   keeperKey: `0x${string}`,
   user: Address,
-  opts: { dryRun?: boolean } = {},
+  opts: { dryRun?: boolean; ranker?: Ranker | null } = {},
 ): Promise<KeeperOutcome> {
   const [signals, terms] = await Promise.all([readSignals(dep, user), readTerms(dep, user)]);
   console.log(`[monitor] ${user} HF=${fmtHf(signals.hf)} trigger=${fmtHf(terms.hfTriggerWad)} debt=${(Number(signals.debt) / 1e18).toFixed(2)}`);
 
-  const decision = decide(signals, terms);
-  console.log(`[strategist] ${decision.memo}`);
+  const decision = opts.ranker ? await decideWith(signals, terms, opts.ranker) : decide(signals, terms);
+  console.log(`[strategist${opts.ranker ? "/llm" : ""}] ${decision.memo}`);
 
   if (!decision.plan) return { triggered: signals.hf < terms.hfTriggerWad, memo: decision.memo };
   if (opts.dryRun) {

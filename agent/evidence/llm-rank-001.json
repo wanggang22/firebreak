@@ -1,0 +1,26 @@
+{
+  "scenario": "FX drift EURC 1.08->0.98, three viable rescue paths, LLM ranks",
+  "model": "claude-opus-4-8",
+  "hf": "1.120",
+  "trigger": "1.200",
+  "target": "1.380",
+  "viable": [
+    {
+      "action": 4,
+      "why": "TOP-UP 131.88 USDC from reserve (no swap, no slippage, no collateral sold)",
+      "costUsdc": "0.00"
+    },
+    {
+      "action": 2,
+      "why": "ROTATE 980.00 USDC of mEURC(LT 0.800) → mTBILL(LT 0.900)",
+      "costUsdc": "3.16"
+    },
+    {
+      "action": 1,
+      "why": "DELEVERAGE: sell 313.79 USDC of mEURC, repay debt",
+      "costUsdc": "342.42"
+    }
+  ],
+  "chosenAction": 4,
+  "memo": "HF 1.120 < trigger 1.200. Target 1.380. Debt 700.00 USDC. Candidates: TOP-UP, ROTATE, DELEVERAGE. LLM ranked 3 viable paths and chose TOP-UP 131.88 USDC from reserve (no swap, no slippage, no collateral sold) (cost 0.00 USDC). Reason: TOP-UP restores health to target at zero cost with no swap, slippage, or collateral sold, keeping your full position intact — the cheapest durable fix available."
+}

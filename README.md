@@ -50,6 +50,6 @@ Borrowers sign an **on-chain Mandate** — a bounded, conditional authorization 
 - [x] Contracts (TDD, forge) — **50 tests green**, incl. fuzz (MockOracle, MockERC20, MiniLend + IPosition, MiniSwap, FirebreakMandate)
 - [x] Keeper agent — monitor + strategist + executor; strategist sizing proven 8/8
 - [x] Agent v1 — **first real on-chain rescue** end-to-end on a live EVM (local anvil): FX drift pushed HF to 1.120, keeper chose the cheapest bounded path (TOP-UP), HF restored to 1.380 ([evidence](agent/evidence/run-local-001.json))
+- [x] LLM strategist — **Claude ranks the vetted rescue paths** and writes the borrower-facing memo; sizing + spend cap + action whitelist stay deterministic, so the model can only pick a bounds-checked path (strict-tool enum + cheapest-path fallback). 11/11 harness tests + [live ranking evidence](agent/evidence/llm-rank-001.json)
 - [ ] Arc testnet deployment — script ready (`contracts/script/deploy-testnet.sh`); pending RPC quota window
-- [ ] LLM strategist + memos (rule-based today; Claude ranks the paths next)
 - [ ] Dashboard + demo video

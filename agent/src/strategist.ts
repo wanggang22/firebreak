@@ -64,10 +64,33 @@ function sizeDeleverage(s: Signals, c: Collateral, t: Terms): bigint {
 
 const withSlippage = (x: bigint) => (x * (10000n - SLIPPAGE_BPS)) / 10000n;
 
-export function decide(s: Signals, t: Terms): Decision {
-  // not triggered
+/** One viable rescue path: pre-sized to restore health, priced, and (in the
+ *  returned set) already filtered to fit the spend cap. This is what the LLM
+ *  ranks — it can only ever pick from these, never invent an unbounded action. */
+export interface Candidate {
+  action: number; // ACTION.* — stable id the ranker selects by
+  plan: Plan; // fully sized, ready to execute
+  cost: bigint; // USDC value the user gives up now (0 for TOP-UP)
+  why: string; // one-line human description
+}
+
+export interface CandidateSet {
+  triggered: boolean;
+  target: bigint; // target HF (WAD)
+  notes: string[]; // reasoning breadcrumbs, folded into the memo
+  viable: Candidate[]; // sized + spend-cap-filtered; empty if nothing fits
+}
+
+/**
+ * The deterministic core: from a health snapshot and the signed Mandate, build
+ * every allowed rescue path, size each to the target HF, price it, and drop any
+ * that breach the spend cap. Pure — no chain, no LLM. Both the rule-based
+ * `decide` and the LLM-ranked `decideWith` consume this; sizing and bounds live
+ * here so the LLM only ever chooses among vetted, executable candidates.
+ */
+export function computeCandidates(s: Signals, t: Terms): CandidateSet {
   if (s.hf >= t.hfTriggerWad) {
-    return { plan: null, memo: `HF ${fmt(s.hf)} ≥ trigger ${fmt(t.hfTriggerWad)} — no rescue needed.` };
+    return { triggered: false, target: targetHf(t), notes: [], viable: [] };
   }
 
   const target = targetHf(t);
@@ -76,9 +99,8 @@ export function decide(s: Signals, t: Terms): Decision {
     `HF ${fmt(s.hf)} < trigger ${fmt(t.hfTriggerWad)}. Target ${fmt(target)}. Debt ${usdc(s.debt)} USDC.`,
   ];
 
-  // Cost model: compare the three allowed paths, pick the cheapest that fits
-  // the spend cap. "Cost" = USDC value the user gives up now.
-  type Candidate = { plan: Plan; cost: bigint; why: string };
+  // Cost model: build the three allowed paths. "Cost" = USDC value the user
+  // gives up now.
   const cands: Candidate[] = [];
 
   // ── TOPUP: repay from reserve. Cost = USDC repaid (but it's the user's own
@@ -90,6 +112,7 @@ export function decide(s: Signals, t: Terms): Decision {
     const repay = clamp(V, 0n, min(t.reserve, s.debt));
     if (repay > 0n) {
       cands.push({
+        action: ACTION.TOPUP,
         plan: plan(ACTION.TOPUP, ZERO_ADDR, 0n, ZERO_ADDR, 0n, 0n, repay),
         cost: 0n, // reserve is the user's own money moved from idle to debt — no value lost
         why: `TOP-UP ${usdc(repay)} USDC from reserve (no swap, no slippage, no collateral sold)`,
@@ -117,6 +140,7 @@ export function decide(s: Signals, t: Terms): Decision {
           const amt = (moveValue * WAD) / risky.priceWad;
           const usdcOut = s.quoteUsdcOut(risky.token, amt);
           cands.push({
+            action: ACTION.ROTATE,
             plan: plan(
               ACTION.ROTATE, risky.token, amt, target2.token,
               withSlippage(usdcOut), 0n /* leg2 min filled by executor */, 0n,
@@ -136,6 +160,7 @@ export function decide(s: Signals, t: Terms): Decision {
     if (amt > 0n) {
       const usdcOut = s.quoteUsdcOut(risky.token, amt);
       cands.push({
+        action: ACTION.DELEVERAGE,
         plan: plan(ACTION.DELEVERAGE, risky.token, amt, ZERO_ADDR, withSlippage(usdcOut), 0n, 0n),
         cost: usdcOut, // gives up this much collateral value now
         why: `DELEVERAGE: sell ${usdc((amt * risky.priceWad) / WAD)} USDC of ${risky.symbol}, repay debt`,
@@ -143,16 +168,90 @@ export function decide(s: Signals, t: Terms): Decision {
     }
   }
 
-  // enforce spend cap, then pick cheapest
-  const fits = cands.filter((c) => spendOf(c.plan, s) <= t.maxSpendPerRescue);
+  const viable = cands.filter((c) => spendOf(c.plan, s) <= t.maxSpendPerRescue);
   notes.push(`Candidates: ${cands.map((c) => c.why.split(":")[0].split(" ")[0]).join(", ") || "none"}.`);
-  if (fits.length === 0) {
-    return { plan: null, memo: `${notes.join(" ")} No path fits spend cap ${usdc(t.maxSpendPerRescue)} USDC.` };
+  return { triggered: true, target, notes, viable };
+}
+
+/** A ranker picks one candidate by action id and explains why (LLM or otherwise). */
+export type Ranker = (input: RankInput) => Promise<RankChoice>;
+export interface RankInput {
+  hfWad: bigint;
+  triggerWad: bigint;
+  targetWad: bigint;
+  debt: bigint;
+  spendCap: bigint;
+  candidates: Candidate[];
+}
+export interface RankChoice {
+  chosenAction: number; // must be one of the candidates' actions
+  reasoning: string;
+}
+
+/**
+ * Rule-based decision: cheapest viable path. Pure and synchronous — the
+ * deterministic fallback and the reference the strategist test pins.
+ */
+export function decide(s: Signals, t: Terms): Decision {
+  const set = computeCandidates(s, t);
+  if (!set.triggered) {
+    return { plan: null, memo: `HF ${fmt(s.hf)} ≥ trigger ${fmt(t.hfTriggerWad)} — no rescue needed.` };
   }
-  fits.sort((a, b) => (a.cost < b.cost ? -1 : a.cost > b.cost ? 1 : 0));
-  const chosen = fits[0];
-  notes.push(`Chose ${chosen.why} — cheapest of ${fits.length} viable (cost ${usdc(chosen.cost)} USDC).`);
+  const chosen = cheapest(set.viable);
+  if (!chosen) {
+    return { plan: null, memo: `${set.notes.join(" ")} No path fits spend cap ${usdc(t.maxSpendPerRescue)} USDC.` };
+  }
+  const notes = [...set.notes, `Chose ${chosen.why} — cheapest of ${set.viable.length} viable (cost ${usdc(chosen.cost)} USDC).`];
   return { plan: chosen.plan, memo: notes.join(" ") };
+}
+
+/**
+ * LLM-ranked decision. The ranker chooses among the SAME vetted candidates the
+ * rule engine built — sizing, spend cap, and action whitelist are already
+ * enforced, so its only freedom is which safe path to take. Any failure or an
+ * out-of-set pick falls back to the cheapest, so the LLM can never make the
+ * position worse or stall a rescue. With 0–1 viable paths there's nothing to
+ * rank, so we skip the call entirely.
+ */
+export async function decideWith(s: Signals, t: Terms, ranker: Ranker): Promise<Decision> {
+  const set = computeCandidates(s, t);
+  if (!set.triggered) {
+    return { plan: null, memo: `HF ${fmt(s.hf)} ≥ trigger ${fmt(t.hfTriggerWad)} — no rescue needed.` };
+  }
+  if (set.viable.length === 0) {
+    return { plan: null, memo: `${set.notes.join(" ")} No path fits spend cap ${usdc(t.maxSpendPerRescue)} USDC.` };
+  }
+  const fallback = cheapest(set.viable)!;
+  if (set.viable.length === 1) {
+    const notes = [...set.notes, `Only one viable path: ${fallback.why} (cost ${usdc(fallback.cost)} USDC).`];
+    return { plan: fallback.plan, memo: notes.join(" ") };
+  }
+
+  try {
+    const choice = await ranker({
+      hfWad: s.hf, triggerWad: t.hfTriggerWad, targetWad: set.target,
+      debt: s.debt, spendCap: t.maxSpendPerRescue, candidates: set.viable,
+    });
+    const picked = set.viable.find((c) => c.action === choice.chosenAction);
+    if (!picked) {
+      const notes = [...set.notes, `LLM returned action ${choice.chosenAction} not in the viable set — falling back to cheapest: ${fallback.why}.`];
+      return { plan: fallback.plan, memo: notes.join(" ") };
+    }
+    const notes = [
+      ...set.notes,
+      `LLM ranked ${set.viable.length} viable paths and chose ${picked.why} (cost ${usdc(picked.cost)} USDC).`,
+      `Reason: ${choice.reasoning.trim()}`,
+    ];
+    return { plan: picked.plan, memo: notes.join(" ") };
+  } catch (err) {
+    const notes = [...set.notes, `LLM ranking unavailable (${(err as Error).message}); using cheapest: ${fallback.why} (cost ${usdc(fallback.cost)} USDC).`];
+    return { plan: fallback.plan, memo: notes.join(" ") };
+  }
+}
+
+function cheapest(cs: Candidate[]): Candidate | null {
+  if (cs.length === 0) return null;
+  return cs.reduce((a, b) => (b.cost < a.cost ? b : a));
 }
 
 /** USDC value moved by a plan (used for the spend-cap pre-check). */

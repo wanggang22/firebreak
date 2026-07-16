@@ -3,9 +3,12 @@
 //     npx tsx src/cli.ts <monitor|rescue> <userAddress>
 //
 // monitor = dry run (read + decide, no tx). rescue = execute on-chain.
+// If ANTHROPIC_API_KEY is set, Claude ranks the vetted rescue paths; otherwise
+// the keeper falls back to the deterministic cheapest-path rule.
 
 import { loadDeployment } from "./config.ts";
 import { tick } from "./keeper.ts";
+import { makeClaudeRanker } from "./llm.ts";
 import type { Address } from "./types.ts";
 
 async function main() {
@@ -18,7 +21,9 @@ async function main() {
   const dep = loadDeployment(depPath);
   const keeperKey = (process.env.KEEPER_PK ?? "0x") as `0x${string}`;
 
-  const outcome = await tick(dep, keeperKey, user as Address, { dryRun: cmd === "monitor" });
+  const ranker = makeClaudeRanker();
+  if (ranker) console.log("[strategist] LLM ranking enabled (claude-opus-4-8)");
+  const outcome = await tick(dep, keeperKey, user as Address, { dryRun: cmd === "monitor", ranker });
   if (cmd === "rescue" && !outcome.rescue && outcome.triggered) process.exit(1);
 }
 
