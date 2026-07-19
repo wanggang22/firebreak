@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Firebreak — Pitch Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:#09090b; --panel:#111113; --panel2:#161619; --line:#26262b;
+    --ink:#e4e4e7; --dim:#9b9ba4; --faint:#6f6f78;
+    --amber:#f59e0b; --ember:#f97316; --teal:#2dd4bf;
+    --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  *{margin:0;box-sizing:border-box;font-family:var(--mono)}
+  body{background:#050506;color:var(--ink);font-family:var(--mono);
+    font-variant-numeric:tabular-nums;line-height:1.5;padding:32px 16px}
+  .slide{width:1120px;max-width:100%;min-height:630px;margin:0 auto 28px;background:var(--bg);
+    border:1px solid var(--line);border-radius:14px;padding:60px 68px;position:relative;
+    display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+  .n{position:absolute;top:26px;right:32px;font-size:13px;color:var(--faint);letter-spacing:.1em}
+  .kick{font-size:13px;letter-spacing:.28em;text-transform:uppercase;color:var(--faint);margin-bottom:18px}
+  h1{font-size:76px;font-weight:700;line-height:1.03;letter-spacing:-.02em}
+  h2{font-size:44px;font-weight:700;line-height:1.12;letter-spacing:-.01em;margin-bottom:26px}
+  h3{font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:14px}
+  p{font-size:21px;color:var(--dim);max-width:74ch}
+  p+p{margin-top:16px}
+  .lead{font-size:26px;color:var(--ink)}
+  b{color:var(--ink);font-weight:600}
+  .amber{color:var(--amber)} .teal{color:var(--teal)} .ember{color:var(--ember)}
+  .rule{height:3px;width:auto;background:var(--amber);box-shadow:0 0 22px var(--amber);margin:26px 0}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:8px}
+  .cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:8px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:24px 26px}
+  .card p{font-size:18px;margin-top:8px}
+  .big{font-size:46px;font-weight:700;line-height:1.1}
+  .chips{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+  .chip{font-size:15px;border:1px solid var(--line);border-radius:999px;padding:5px 14px;color:var(--dim)}
+  ul{list-style:none;margin-top:10px}
+  li{font-size:20px;color:var(--dim);padding:9px 0 9px 30px;position:relative;max-width:78ch}
+  li::before{content:"—";position:absolute;left:0;color:var(--amber)}
+  li b{color:var(--ink)}
+  table{width:100%;border-collapse:collapse;margin-top:14px;font-size:19px}
+  td,th{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line)}
+  th{color:var(--faint);font-size:14px;font-weight:500;letter-spacing:.08em;text-transform:uppercase}
+  .ok{color:var(--teal)} .gap{color:var(--amber)}
+  .flow{font-size:17px;color:var(--dim);background:var(--panel2);border:1px solid var(--line);
+    border-radius:11px;padding:24px 26px;white-space:pre;overflow-x:auto;line-height:1.75;margin-top:6px}
+  .foot{position:absolute;bottom:26px;left:68px;right:68px;display:flex;justify-content:space-between;
+    font-size:13px;color:var(--faint);border-top:1px solid var(--line);padding-top:14px}
+  a{color:var(--teal);text-decoration:none}
+  .glow{position:absolute;border-radius:50%;filter:blur(100px);opacity:.14;pointer-events:none}
+  @media print{
+    body{background:#fff;padding:0}
+    .slide{page-break-after:always;margin:0;border:none;border-radius:0;width:100%;min-height:100vh}
+  }
+</style>
+</head>
+<body>
+
+<!-- 1 TITLE -->
+<section class="slide">
+  <div class="glow" style="width:760px;height:760px;background:var(--amber);left:-180px;top:-240px"></div>
+  <div class="n">01</div>
+  <h1><span class="amber">■</span> FIREBREAK</h1>
+  <div class="rule" style="width:560px"></div>
+  <p class="lead">The liquidation firewall for stablecoin-native lending on Arc.</p>
+  <p style="margin-top:22px">Borrowers sign a bounded on-chain <b>Mandate</b>. An autonomous keeper rescues the loan before liquidators can move — one atomic transaction, settled sub-second in USDC.</p>
+  <div class="chips">
+    <span class="chip">DeFi Track</span><span class="chip">Agentic Economy Track</span>
+    <span class="chip">Programmable Money Hackathon</span>
+  </div>
+  <div class="foot"><span>github.com/wanggang22/firebreak</span><span>Live on Arc testnet · chainId 5042002</span></div>
+</section>
+
+<!-- 2 PROBLEM -->
+<section class="slide">
+  <div class="glow" style="width:700px;height:700px;background:var(--ember);right:-200px;bottom:-220px"></div>
+  <div class="n">02</div>
+  <div class="kick">the problem</div>
+  <h2>Liquidation doesn't flash-crash.<br /><span class="ember">It drifts.</span></h2>
+  <p>On a stablecoin-native L1, collateral is FX and tokenized RWAs — EURC, T-bills, private credit. They don't gap down 40% in a candle. They <b>slide</b>: the euro moves two cents over a week, an RWA re-prices, interest accrues.</p>
+  <p>Health factor walks slowly toward the line. A liquidator bot has been waiting for hours. It takes a <b class="ember">5–10% penalty</b> out of the borrower's collateral — for something a <b>0.94 USDC top-up</b> would have fixed.</p>
+  <p style="margin-top:22px;color:var(--faint)">Nobody is watching their health factor at 3am. And handing a bot custody, or approving each transaction by hand, both defeat the purpose.</p>
+</section>
+
+<!-- 3 SOLUTION -->
+<section class="slide">
+  <div class="n">03</div>
+  <div class="kick">the solution</div>
+  <h2>A bounded authorization the borrower signs on-chain.</h2>
+  <div class="cols3">
+    <div class="card"><h3>Trigger</h3><div class="big amber">&lt; 1.20</div><p>Act only when health factor crosses this line.</p></div>
+    <div class="card"><h3>Spend cap</h3><div class="big">50 <span style="font-size:24px;color:var(--dim)">USDC</span></div><p>Never move more than this per rescue.</p></div>
+    <div class="card"><h3>Whitelist</h3><div class="big" style="font-size:26px;padding-top:12px">DELEVERAGE<br/>ROTATE · TOP-UP</div><p>Only these actions, nothing else.</p></div>
+  </div>
+  <p style="margin-top:30px">The <b>FirebreakMandate</b> contract re-checks every bound on-chain at execution. The keeper never holds borrower funds and <b>cannot</b> exceed the cap, take an un-whitelisted action, or act on a healthy position.</p>
+  <p style="color:var(--teal);margin-top:14px">Non-custodial and autonomous are not a tradeoff — if the bounds live in the contract.</p>
+</section>
+
+<!-- 4 ARCHITECTURE -->
+<section class="slide">
+  <div class="n">04</div>
+  <div class="kick">how it works</div>
+  <h2>Monitor → strategist → executor, in one atomic tx.</h2>
+  <div class="flow">  signals            ┌──────────────────────────────┐
+ HF, prices,   ───▶ │  Keeper agent (TypeScript)    │
+ swap quotes        │  monitor → strategist → exec  │
+                    └───────────────┬──────────────┘
+                                    │  rescue(user, plan)
+                                    ▼
+                    ┌──────────────────────────────┐
+                    │  FirebreakMandate.sol         │   bounded · conditional
+                    │  HF &lt; trigger? plan in bounds?│   non-custodial
+                    └───────┬───────────────┬──────┘
+                            ▼               ▼
+                      MiniLend.sol     MiniSwap.sol
+                      (IPosition)     (USDC ↔ ERC-20)</div>
+  <p style="margin-top:22px">The keeper speaks a small <b>IPosition</b> interface — MiniLend is just the first adapter, so the same agent can drive any Arc lending venue.</p>
+</section>
+
+<!-- 5 THE AGENTIC CORE -->
+<section class="slide">
+  <div class="glow" style="width:680px;height:680px;background:var(--teal);left:38%;bottom:-280px"></div>
+  <div class="n">05</div>
+  <div class="kick">the hard part — and our differentiator</div>
+  <h2>The LLM <span class="teal">ranks</span>. Deterministic code <span class="amber">sizes and bounds-checks</span>.</h2>
+  <div class="cols">
+    <div class="card">
+      <h3>Deterministic core</h3>
+      <ul style="margin:0">
+        <li>Builds <b>every</b> allowed rescue path</li>
+        <li>Sizes each to restore health to target (closed form)</li>
+        <li>Prices each, drops any breaching the spend cap</li>
+      </ul>
+      <p style="color:var(--teal);margin-top:12px">→ a set of vetted, executable candidates</p>
+    </div>
+    <div class="card">
+      <h3>Claude ranks — only that set</h3>
+      <ul style="margin:0">
+        <li>Strict-tool <b>enum</b> of candidate action ids</li>
+        <li>Writes the borrower-facing reasoning memo</li>
+        <li>Out-of-set pick or API error → <b>cheapest path executes anyway</b></li>
+      </ul>
+      <p style="color:var(--teal);margin-top:12px">→ never stalls, never unbounded</p>
+    </div>
+  </div>
+  <p style="margin-top:26px">The model's only freedom is <b>which safe path</b> — never whether it's safe. Financial sizing is arithmetic and stays in code. <span style="color:var(--faint)">11/11 harness tests pin exactly this contract.</span></p>
+</section>
+
+<!-- 6 PROOF -->
+<section class="slide">
+  <div class="n">06</div>
+  <div class="kick">not a mockup</div>
+  <h2>Real. On Arc testnet.</h2>
+  <p style="margin-bottom:8px">EURC drifted down. Health factor hit <b class="ember">1.120</b>, under the trigger. The deterministic core sized three viable paths; Claude ranked them and chose TOP-UP; the executor sent it.</p>
+  <table>
+    <tr><th>path</th><th>cost</th><th>detail</th></tr>
+    <tr><td class="teal"><b>TOP-UP ✓</b></td><td class="teal">0.00 USDC</td><td class="teal">0.94 USDC from reserve — no swap, no slippage, no collateral sold</td></tr>
+    <tr><td>ROTATE</td><td>~0.00</td><td>7.00 USDC mEURC (LT .80) → mTBILL (LT .90), two swap legs</td></tr>
+    <tr><td>DELEVERAGE</td><td>0.36 USDC</td><td>sell 2.24 USDC of mEURC — permanently smaller position</td></tr>
+  </table>
+  <div class="cols3" style="margin-top:26px">
+    <div class="card"><h3>health factor</h3><div class="big"><span class="ember">1.120</span> <span style="color:var(--faint)">→</span> <span class="teal">1.380</span></div></div>
+    <div class="card"><h3>spent</h3><div class="big">0.94 <span style="font-size:24px;color:var(--dim)">USDC</span></div></div>
+    <div class="card"><h3>verified</h3><div class="big" style="font-size:22px;padding-top:14px">receipt success<br/>+ independent<br/><span class="teal">readContract</span></div></div>
+  </div>
+  <div class="foot"><span>tx 0x6041…9869 · testnet.arcscan.app</span><span>Mandate 0x529D…6915</span></div>
+</section>
+
+<!-- 7 WHAT'S BUILT -->
+<section class="slide">
+  <div class="n">07</div>
+  <div class="kick">what's built</div>
+  <h2>Shipped, tested, and open.</h2>
+  <div class="cols">
+    <div class="card">
+      <h3>Contracts — Foundry</h3>
+      <ul style="margin:0">
+        <li><b>50 tests green</b>, incl. fuzz</li>
+        <li>FirebreakMandate · MiniLend (IPosition) · MiniSwap · MockOracle</li>
+        <li><b>Deployed on Arc testnet</b> (chainId 5042002)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Keeper agent — TypeScript</h3>
+      <ul style="margin:0">
+        <li>monitor · strategist · executor</li>
+        <li><b>8/8</b> sizing + <b>11/11</b> LLM-safety tests</li>
+        <li>Every rescue receipt + memo in <b>evidence/</b></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Live console</h3>
+      <ul style="margin:0">
+        <li>Single-screen dashboard, SSE-streamed keeper stages</li>
+        <li>Watch drift → Claude's memo → rescue, live</li>
+        <li>Hosted replay of the real testnet rescue</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Everything public</h3>
+      <ul style="margin:0">
+        <li>Open repo, contracts + agent + evidence</li>
+        <li>Clickable arcscan proof for every claim</li>
+        <li>Demo video</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 8 JUDGING FIT -->
+<section class="slide">
+  <div class="n">08</div>
+  <div class="kick">how this scores</div>
+  <h2>Against the four judging criteria.</h2>
+  <table>
+    <tr><th>criterion</th><th>Firebreak</th></tr>
+    <tr>
+      <td><b>Arc &amp; USDC integration</b></td>
+      <td class="ok">Working prototype <b>deployed on Arc testnet</b>; native USDC as gas + settlement; real rescue tx on-chain</td>
+    </tr>
+    <tr>
+      <td><b>Right core products</b></td>
+      <td class="gap">Circle <b>Agent Stack</b> + <b>Wallets</b> integration in flight — the keeper is exactly an Agent-Stack-shaped workload</td>
+    </tr>
+    <tr>
+      <td><b>Use case &amp; impact</b></td>
+      <td class="ok">Liquidation penalties are a real, quantified loss; drift-based collateral is Arc's native case; protocol-agnostic via IPosition</td>
+    </tr>
+    <tr>
+      <td><b>Execution &amp; presentation</b></td>
+      <td class="ok">69 tests, live console, on-chain evidence for every number — a clear working demo, not complexity for its own sake</td>
+    </tr>
+  </table>
+  <p style="margin-top:24px;color:var(--faint)">We're naming the gap rather than hiding it: Agent Stack / App Kits integration is the one criterion still in progress before final submission.</p>
+</section>
+
+<!-- 9 WHY ARC -->
+<section class="slide">
+  <div class="n">09</div>
+  <div class="kick">why this wants Arc specifically</div>
+  <h2>Three properties, each load-bearing.</h2>
+  <div class="cols3">
+    <div class="card"><h3>01 · drifting collateral</h3><p>FX and tokenized RWAs are Arc's native collateral. Slow drift is exactly what a watching agent catches and a human misses. On a chain of volatile alts you'd be too late anyway.</p></div>
+    <div class="card"><h3>02 · sub-second settlement</h3><p>The rescue must land <b>before</b> the liquidator's transaction. Rescue and liquidation are in a race — finality latency is the margin.</p></div>
+    <div class="card"><h3>03 · USDC-denominated gas</h3><p>Keeper cost and borrower savings are in the same unit. You can decide whether a 0.94 USDC rescue is worth sending, without modeling a volatile gas token.</p></div>
+  </div>
+  <p style="margin-top:30px">Firebreak is not a generic DeFi app ported to Arc. Remove any one of these three and the product stops working.</p>
+</section>
+
+<!-- 10 ROADMAP -->
+<section class="slide">
+  <div class="n">10</div>
+  <div class="kick">what's next</div>
+  <h2>From hackathon to production.</h2>
+  <ul>
+    <li><b>Circle Agent Stack + Wallets</b> — run the keeper as an Agent-Stack agent; let a borrower sign a Mandate with email/PIN, no seed phrase</li>
+    <li><b>Real protocol adapters</b> — the keeper already speaks IPosition; wiring a live Arc lending venue proves the protocol-agnostic claim</li>
+    <li><b>Keeper economics</b> — a capped per-rescue fee inside the Mandate, designed so it can't incentivise unnecessary rescues</li>
+    <li><b>Agent identity</b> — authorize a verified agent identity (ERC-8004 / KYA) instead of a raw keeper address, so a borrower can revoke a class of keeper</li>
+    <li><b>Multi-keeper coordination</b> — first-writer-wins on-chain today; commit-reveal if racing becomes real</li>
+  </ul>
+</section>
+
+<!-- 11 CLOSE -->
+<section class="slide">
+  <div class="glow" style="width:800px;height:800px;background:var(--amber);right:-220px;top:-260px"></div>
+  <div class="n">11</div>
+  <h2 style="font-size:52px">Liquidation is a fire.<br/>By the time you smell smoke, it's too late.</h2>
+  <div class="rule" style="width:420px"></div>
+  <p class="lead" style="margin-bottom:30px">Firebreak is the line the fire can't cross.</p>
+  <div class="cols">
+    <div class="card">
+      <h3>try it</h3>
+      <p style="font-size:18px">Live replay of the real testnet rescue:<br/><a href="https://firebreak-site-wanggang22s-projects.vercel.app">firebreak-site-wanggang22s-projects.vercel.app</a></p>
+      <p style="font-size:18px;margin-top:12px">Run the live console locally: <b>npm run demo:server</b></p>
+    </div>
+    <div class="card">
+      <h3>code &amp; proof</h3>
+      <p style="font-size:18px"><a href="https://github.com/wanggang22/firebreak">github.com/wanggang22/firebreak</a></p>
+      <p style="font-size:18px;margin-top:12px">Rescue tx: <a href="https://testnet.arcscan.app/tx/0x6041d281b4d37ae7e599787478e6edb008cc6606a9b7483dd37503105d4d9869">0x6041…9869</a> on arcscan</p>
+    </div>
+  </div>
+  <div class="foot"><span>Programmable Money Hackathon · Encode × Arc × Circle</span><span>DeFi + Agentic Economy</span></div>
+</section>
+
+</body>
+</html>
