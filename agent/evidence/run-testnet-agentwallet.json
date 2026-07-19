@@ -1,0 +1,56 @@
+{
+  "note": "The keeper runs on a Circle Agent Wallet. Claude ranked the deterministic core's vetted rescue paths, and the chosen plan was executed on Arc testnet by the agent wallet via `circle wallet execute` — no raw private key in the loop. Decision logic, sizing, spend cap, and the Mandate's on-chain checks are unchanged from the standard run; only the signer differs.",
+  "network": "arc-testnet (chainId 5042002)",
+  "stack": {
+    "decision": "Firebreak deterministic core + Claude (claude-opus-4-8) ranking",
+    "signer": "Circle Agent Wallet (Agent Stack)",
+    "cli": "@circle-fin/cli v0.0.6",
+    "chainId": "ARC-TESTNET"
+  },
+  "keeperAgentWallet": {
+    "address": "0xd07f09c46c970797d239317e6e1a31d1c10dc524",
+    "type": "ERC-4337 smart contract account (has bytecode on Arc testnet)",
+    "provisionedBy": "circle wallet login (testnet session)",
+    "fundedBy": "circle wallet fund — testnet faucet drip, 20 USDC native"
+  },
+  "user": "0x20E40d46631026891D89CA1d33a94073D561B23B",
+  "mandate": "0x47B16130aE4e8e2Aca9956191753a99AEA3062db",
+  "pool": "0xe525F19f891FE3E1dBBf8069F8f6DC8Fe3839764",
+  "trigger": "1.200",
+  "target": "1.380",
+  "ranking": {
+    "viablePaths": [
+      { "action": "TOPUP", "why": "TOP-UP 0.94 USDC from reserve (no swap, no slippage, no collateral sold)", "costUsdc": "0.00" },
+      { "action": "ROTATE", "why": "ROTATE 7.00 USDC of mEURC(LT 0.800) -> mTBILL(LT 0.900)", "costUsdc": "0.00" },
+      { "action": "DELEVERAGE", "why": "DELEVERAGE: sell 2.24 USDC of mEURC, repay debt", "costUsdc": "0.36" }
+    ],
+    "chosenAction": "TOPUP",
+    "memo": "HF 1.120 < trigger 1.200. Target 1.380. Debt 5.00 USDC. Candidates: TOP-UP, ROTATE, DELEVERAGE. LLM ranked 3 viable paths and chose TOP-UP 0.94 USDC from reserve (no swap, no slippage, no collateral sold) (cost 0.00 USDC). Reason: TOP-UP restores your health factor from your own prepaid reserve at zero cost now — no swap fees, no slippage, and no collateral sold — making it the cheapest durable fix while leaving your market exposure and position size fully intact."
+  },
+  "execution": {
+    "method": "circle wallet execute",
+    "entryPoint": "rescueFlat(address,uint8,address,uint256,address,uint256,uint256,uint256)",
+    "whyFlatEntryPoint": "Circle CLI v0.0.6 cannot encode struct/tuple arguments — `rescue(address,(uint8,...))` fails estimation in every encoding tried, while simple-argument calls succeed. FirebreakMandate therefore exposes `rescueFlat`, which delegates to the identical internal path (proven equivalent by test_RescueFlat_MatchesStructRescue; the keeper check still holds, per test_RevertWhen_RescueFlatByNonKeeper).",
+    "circleTransactionId": "c86eee11-a9b9-5e83-88e1-de98dac92f7c",
+    "state": "COMPLETE",
+    "txHash": "0xf608f5902aa2fb8bb1b90411dd9c9ab7efc270309dded66a0ab2fc42bc6fd78a",
+    "explorerUrl": "https://testnet.arcscan.app/tx/0xf608f5902aa2fb8bb1b90411dd9c9ab7efc270309dded66a0ab2fc42bc6fd78a",
+    "networkFeeUsdc": "0.010023426177977742",
+    "accountAbstraction": {
+      "entryPointContract": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+      "bundlerEoa": "0xDEa3556040658885B0Ac5Bb930F0B7e2f52DBFBC",
+      "note": "The transaction's tx.origin is Circle's bundler and its `to` is the ERC-4337 EntryPoint; the effective msg.sender at FirebreakMandate is the agent wallet itself, which is why the Mandate's keeper check passes."
+    }
+  },
+  "result": {
+    "hfBefore": "1.120",
+    "hfAfter": "1.380",
+    "spent": "0.942028985507246377 USDC",
+    "debtBefore": "5.000 USDC",
+    "debtAfter": "4.057971014492753623 USDC",
+    "receiptStatus": "1 (success)",
+    "independentVerification": "cast call pool.healthFactor(alice) = 1380000000000000000 and pool.debtOf(alice) = 4057971014492753623, read directly from Arc testnet after the transaction",
+    "eventDecoded": "RescueExecuted(user=0x20E4...23B, action=4 TOPUP, spent=0x0d12c25f0947f129, hfBefore=0x0f8b0a10e4700000, hfAfter=0x1326beb03e0a0000)"
+  },
+  "limitation": "Circle Agent Wallet spending policies (`circle wallet limit`) are mainnet-only — the CLI rejects testnet chains — and Arc is testnet-only for Agent Wallets today. So this run demonstrates the keeper *running on* an Agent Wallet, not a Circle-enforced spend policy. On Arc testnet the FirebreakMandate contract remains the enforcing layer; the Circle policy layer becomes a second, independent bound when both reach mainnet."
+}

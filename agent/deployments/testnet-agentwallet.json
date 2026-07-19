@@ -1,0 +1,19 @@
+{
+  "network": "arc-testnet (keeper = Circle Agent Wallet)",
+  "oracle": "0x70bF02237dd90257Dec5B963E74a8195abb17749",
+  "pool": "0xe525F19f891FE3E1dBBf8069F8f6DC8Fe3839764",
+  "amm": "0x475DDd6715450c3218f3FA698b96f745D7da6e03",
+  "mandate": "0x47B16130aE4e8e2Aca9956191753a99AEA3062db",
+  "tokens": [
+    {
+      "token": "0xe9062e57a9F6ca7C21fa7416364f6b97d1333CB4",
+      "symbol": "mEURC",
+      "isStable": false
+    },
+    {
+      "token": "0xdC0ab782c5F9DFF5787eF6D3B936ef097E4A2682",
+      "symbol": "mTBILL",
+      "isStable": true
+    }
+  ]
+}

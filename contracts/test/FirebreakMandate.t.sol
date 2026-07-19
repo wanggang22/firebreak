@@ -219,6 +219,31 @@ contract FirebreakMandateTest is Test {
 
     /* ── path C: top-up ─────────────────────────────────── */
 
+    /// The flat-argument entry point exists so managed agent-wallet tooling
+    /// (which cannot encode structs) can drive the same rescue. It must be
+    /// exactly equivalent — same effects, and the same keeper check.
+    function test_RescueFlat_MatchesStructRescue() public {
+        _register(TOPUP, 300e18, 200e18);
+        _drift();
+        uint256 hfBefore = pool.healthFactor(alice);
+
+        vm.prank(keeper);
+        fb.rescueFlat(alice, TOPUP, address(0), 0, address(0), 0, 0, 150e18);
+
+        assertEq(pool.debtOf(alice), 550e18);
+        (,, uint256 reserve) = fb.mandateOf(alice);
+        assertEq(reserve, 50e18);
+        assertGt(pool.healthFactor(alice), hfBefore);
+    }
+
+    function test_RevertWhen_RescueFlatByNonKeeper() public {
+        _register(TOPUP, 300e18, 200e18);
+        _drift();
+        vm.expectRevert(FirebreakMandate.NotKeeper.selector);
+        vm.prank(address(0xBAD));
+        fb.rescueFlat(alice, TOPUP, address(0), 0, address(0), 0, 0, 150e18);
+    }
+
     function test_TopUp_RepaysFromReserve() public {
         _register(TOPUP, 300e18, 200e18);
         _drift();

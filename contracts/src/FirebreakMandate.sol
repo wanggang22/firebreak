@@ -124,6 +124,31 @@ contract FirebreakMandate is IRescueCallback {
     /// @notice Execute a rescue. Every boundary the user signed is enforced
     ///         on-chain here — the keeper is untrusted by construction.
     function rescue(address user, Plan memory plan) external nonReentrant {
+        _rescue(user, plan);
+    }
+
+    /// @notice Same rescue, with the plan flattened into positional arguments.
+    ///         Managed agent-wallet tooling (e.g. Circle Agent Wallets) cannot
+    ///         encode struct parameters, so this gives an equivalent entry point
+    ///         that such a keeper can call. Identical checks — it delegates to
+    ///         the same internal path, so no bound is weakened.
+    function rescueFlat(
+        address user,
+        uint8 action,
+        address collateralToken,
+        uint256 collateralAmount,
+        address rotateTo,
+        uint256 minSwapOut,
+        uint256 minSwapOut2,
+        uint256 topUpAmount
+    ) external nonReentrant {
+        _rescue(
+            user,
+            Plan(action, collateralToken, collateralAmount, rotateTo, minSwapOut, minSwapOut2, topUpAmount)
+        );
+    }
+
+    function _rescue(address user, Plan memory plan) internal {
         State storage s = mandates[user];
         if (!s.active) revert NoMandate();
         Terms memory t = s.terms;

@@ -224,7 +224,7 @@
     </tr>
     <tr>
       <td><b>Right core products</b></td>
-      <td class="gap">Circle <b>Agent Stack</b> + <b>Wallets</b> integration in flight — the keeper is exactly an Agent-Stack-shaped workload</td>
+      <td class="ok">The keeper <b>runs on a Circle Agent Wallet</b> (ERC-4337 smart account) on Arc testnet — Claude ranks, the agent wallet executes the rescue on-chain, no raw key</td>
     </tr>
     <tr>
       <td><b>Use case &amp; impact</b></td>
@@ -232,10 +232,10 @@
     </tr>
     <tr>
       <td><b>Execution &amp; presentation</b></td>
-      <td class="ok">69 tests, live console, on-chain evidence for every number — a clear working demo, not complexity for its own sake</td>
+      <td class="ok">71 tests, live console, on-chain evidence for every number — a clear working demo, not complexity for its own sake</td>
     </tr>
   </table>
-  <p style="margin-top:24px;color:var(--faint)">We're naming the gap rather than hiding it: Agent Stack / App Kits integration is the one criterion still in progress before final submission.</p>
+  <p style="margin-top:24px;color:var(--faint)">One honest limit: Circle wallet <b>spend policies are mainnet-only</b> and Arc is testnet-only for Agent Wallets, so the policy guardrail can't be demonstrated on Arc yet — the Mandate contract is the enforcing layer there.</p>
 </section>
 
 <!-- 9 WHY ARC -->
@@ -257,7 +257,7 @@
   <div class="kick">what's next</div>
   <h2>From hackathon to production.</h2>
   <ul>
-    <li><b>Circle Agent Stack + Wallets</b> — run the keeper as an Agent-Stack agent; let a borrower sign a Mandate with email/PIN, no seed phrase</li>
+    <li><b>Circle wallet spend policies</b> — the keeper already runs on an Agent Wallet; when Arc reaches mainnet its policy becomes a second, Circle-enforced bound alongside the Mandate</li>
     <li><b>Real protocol adapters</b> — the keeper already speaks IPosition; wiring a live Arc lending venue proves the protocol-agnostic claim</li>
     <li><b>Keeper economics</b> — a capped per-rescue fee inside the Mandate, designed so it can't incentivise unnecessary rescues</li>
     <li><b>Agent identity</b> — authorize a verified agent identity (ERC-8004 / KYA) instead of a raw keeper address, so a borrower can revoke a class of keeper</li>
