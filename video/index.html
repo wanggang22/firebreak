@@ -18,7 +18,7 @@
   .sans { font-family: "JetBrains Mono", ui-monospace, monospace; }
   .scene { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; overflow: hidden; padding: 120px 150px; }
   #s1 { z-index: 1; }
-  #s2, #s3, #s4, #s5, #s6, #s7, #s8, #s9 { opacity: 0; }
+  #s2, #s3, #s4, #s5, #s6, #s7, #s8, #s9, #s10 { opacity: 0; }
   .glow { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .16; pointer-events: none; }
   .kicker { font-size: 20px; letter-spacing: .32em; text-transform: uppercase; color: var(--faint); }
   .h1 { font-size: 108px; font-weight: 700; line-height: 1.02; letter-spacing: -.01em; }
@@ -72,7 +72,7 @@
 </style>
 </head>
 <body>
-  <div id="root" data-composition-id="main" data-width="1920" data-height="1080" data-start="0" data-duration="180">
+  <div id="root" data-composition-id="main" data-width="1920" data-height="1080" data-start="0" data-duration="195">
 
     <!-- S1 TITLE 0-11 -->
     <div id="s1" class="scene">
@@ -217,11 +217,32 @@
           <div id="s7-b" class="stat"><div class="lab">spent</div><div class="val">0.94 <span style="font-size:34px;color:var(--dim)">USDC</span></div></div>
           <div id="s7-c" class="stat"><div class="lab">chosen by Claude</div><div class="val teal">TOP-UP</div></div>
         </div>
-        <div id="s7-tx" class="txbar">tx <b>0x6041…9869</b> · verified on <span class="teal">testnet.arcscan.app</span> · 50 contract tests · 19 agent tests</div>
+        <div id="s7-tx" class="txbar">tx <b>0x6041…9869</b> · verified on <span class="teal">testnet.arcscan.app</span> · 52 contract tests · 19 agent tests</div>
       </div>
     </div>
 
-    <!-- S8 WHY ARC 161.5-172.5 -->
+    <!-- S10 AGENT STACK 161.5-176.5 -->
+    <div id="s10" class="scene">
+      <div class="glow" style="width:760px;height:760px;background:var(--teal);right:-200px;top:-240px"></div>
+      <div style="height:100%;display:flex;flex-direction:column;justify-content:center;gap:30px">
+        <div id="s10-k" class="kicker">and the keeper holds no private key</div>
+        <div id="s10-h" class="h2 sans" style="max-width:32ch">It runs on a <span class="teal">Circle Agent Wallet</span>.</div>
+        <div class="two">
+          <div id="s10-a" class="card">
+            <h3>the keeper is a smart account</h3>
+            <p>An ERC-4337 account from Circle's Agent Stack. Claude ranks; the agent wallet signs and sends. No raw key anywhere in the loop.</p>
+          </div>
+          <div id="s10-b" class="card">
+            <h3>same rescue, on Arc testnet</h3>
+            <p>HF <span class="ember">1.120</span> → <span class="teal">1.380</span> · fee 0.0100 USDC</p>
+            <p style="margin-top:10px;color:var(--faint)">tx 0xf608…d78a</p>
+          </div>
+        </div>
+        <div id="s10-p" class="lead" style="font-size:28px;max-width:60ch">Wallet-level spend policies are mainnet-only today, so on Arc the Mandate contract is the enforcing layer — a second, independent bound once both reach mainnet.</div>
+      </div>
+    </div>
+
+    <!-- S8 WHY ARC 176-187 -->
     <div id="s8" class="scene">
       <div style="height:100%;display:flex;flex-direction:column;justify-content:center;gap:30px">
         <div id="s8-k" class="kicker">why this wants arc specifically</div>
@@ -331,20 +352,27 @@ tl.from("#s7-c",  { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 148.
 tl.from("#s7-tx", { opacity: 0, duration: 0.9, ease: "power2.out" }, 151.0);
 
 /* S8 WHY ARC */
-xfade("#s7", "#s8", 161.5);
-tl.from("#s8-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 162.2);
-tl.from("#s8-h", { y: 44, opacity: 0, duration: 0.8, ease: "expo.out" }, 162.6);
-tl.from("#s8-a", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 164.6);
-tl.from("#s8-b", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 165.4);
-tl.from("#s8-c", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 166.2);
+xfade("#s7", "#s10", 161.5);
+tl.from("#s10-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 162.2);
+tl.from("#s10-h", { y: 46, opacity: 0, duration: 0.9, ease: "expo.out" }, 162.6);
+tl.from("#s10-a", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 165.4);
+tl.from("#s10-b", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 167.4);
+tl.from("#s10-p", { y: 30, opacity: 0, duration: 0.9, ease: "power2.out" }, 171.0);
+
+xfade("#s10", "#s8", 176.0);
+tl.from("#s8-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 176.7);
+tl.from("#s8-h", { y: 44, opacity: 0, duration: 0.8, ease: "expo.out" }, 177.1);
+tl.from("#s8-a", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 179.1);
+tl.from("#s8-b", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 179.9);
+tl.from("#s8-c", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 180.7);
 
 /* S9 CLOSE */
-xfade("#s8", "#s9", 172.0);
-tl.from("#s9-h",     { y: 44, opacity: 0, duration: 0.9, ease: "expo.out" }, 172.7);
-tl.from("#s9-line",  { scaleX: 0, duration: 0.8, ease: "expo.out" }, 173.6);
-tl.from("#s9-tag",   { y: 32, opacity: 0, duration: 0.8, ease: "power3.out" }, 174.2);
-tl.from("#s9-mark",  { y: 40, opacity: 0, duration: 0.9, ease: "power3.out" }, 175.2);
-tl.from("#s9-links", { opacity: 0, duration: 0.8, ease: "power2.out" }, 176.2);
+xfade("#s8", "#s9", 187.0);
+tl.from("#s9-h",     { y: 44, opacity: 0, duration: 0.9, ease: "expo.out" }, 187.7);
+tl.from("#s9-line",  { scaleX: 0, duration: 0.8, ease: "expo.out" }, 188.6);
+tl.from("#s9-tag",   { y: 32, opacity: 0, duration: 0.8, ease: "power3.out" }, 189.2);
+tl.from("#s9-mark",  { y: 40, opacity: 0, duration: 0.9, ease: "power3.out" }, 190.2);
+tl.from("#s9-links", { opacity: 0, duration: 0.8, ease: "power2.out" }, 191.2);
 
 window.__timelines["main"] = tl;
 </script>
