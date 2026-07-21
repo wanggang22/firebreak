@@ -115,6 +115,8 @@ Three properties, each load-bearing — remove any one and the product stops wor
 
 Native USDC (gas + settlement, 18-decimal), Arc smart contracts and sub-second finality, Arc testnet RPC + arcscan for verification, **Circle Agent Stack — Agent Wallets** (ERC-4337 smart account as the keeper, `@circle-fin/cli`), and Anthropic Claude (`claude-opus-4-8`) as the ranking strategist.
 
+**On App Kits — deliberately not used.** Send, Bridge, Swap and Unified Balance solve cross-chain payment and liquidity movement. Firebreak's money movement is a *collateral swap inside a single lending position on one chain*, executed atomically by the Mandate contract so every bound is re-checked in the same transaction. Routing that leg through an external SDK would add a dependency and break atomicity without changing what the product does. Agent Stack was the relevant Circle surface here, and we used it for real. We'd rather say this plainly than bolt on a product for the checklist.
+
 ## Roadmap
 
 - **Circle wallet spend policies** as a second enforced bound, once Arc + Agent Wallets meet on mainnet.

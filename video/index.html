@@ -72,7 +72,7 @@
 </style>
 </head>
 <body>
-  <div id="root" data-composition-id="main" data-width="1920" data-height="1080" data-start="0" data-duration="224">
+  <div id="root" data-composition-id="main" data-width="1920" data-height="1080" data-start="0" data-duration="180">
 
     <!-- S1 TITLE 0-11 -->
     <div id="s1" class="scene">
@@ -306,9 +306,13 @@
       <div class="glow" style="width:900px;height:900px;background:var(--amber);right:-200px;top:-240px"></div>
       <div style="height:100%;display:flex;flex-direction:column;justify-content:center;gap:30px">
         <div id="s9-h" class="h2 sans" style="max-width:28ch">Liquidation is a fire. By the time you smell smoke, it's too late.</div>
-        <div id="s9-line" class="fbline" style="width:520px;transform-origin:left"></div>
+        <div id="s9-line" class="fbline" style="position:relative;width:520px;transform-origin:left"></div>
         <div id="s9-tag" class="lead" style="font-size:36px;max-width:40ch">Firebreak is the line the fire can't cross.</div>
         <div id="s9-mark" class="sans" style="font-size:88px;font-weight:800;margin-top:16px"><span class="amber">■</span> FIREBREAK</div>
+        <div id="s9-meta" style="display:flex;gap:56px;flex-wrap:wrap;font-size:25px;margin-top:2px">
+          <div><span style="color:var(--faint)">Track</span>&nbsp;&nbsp;DeFi <span style="color:var(--faint)">+</span> Agentic Economy</div>
+          <div><span style="color:var(--faint)">Built with</span>&nbsp;&nbsp;Arc <span style="color:var(--faint)">·</span> USDC <span style="color:var(--faint)">·</span> Circle Agent Stack</div>
+        </div>
         <div id="s9-links" style="font-size:26px;color:var(--dim)">github.com/wanggang22/firebreak</div>
       </div>
     </div>
@@ -331,111 +335,112 @@ tl.from("#s1-tag",  { y: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 1.
 tl.from("#s1-sub",  { opacity: 0, duration: 0.8, ease: "power2.out" }, 2.0);
 
 /* S2 PROBLEM */
-xfade("#s1", "#s2", 10.5);
-tl.from("#s2-k",  { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 11.2);
-tl.from("#s2-h",  { y: 50, opacity: 0, duration: 0.9, ease: "expo.out" }, 11.6);
-tl.from("#s2-p",  { y: 40, opacity: 0, duration: 0.9, ease: "power3.out" }, 13.4);
-tl.from("#s2-p2", { y: 40, opacity: 0, duration: 0.9, ease: "power3.out" }, 20.0);
+xfade("#s1", "#s2", 8.0);
+tl.from("#s2-k",  { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 8.7);
+tl.from("#s2-h",  { y: 50, opacity: 0, duration: 0.9, ease: "expo.out" }, 9.1);
+tl.from("#s2-p",  { y: 40, opacity: 0, duration: 0.9, ease: "power3.out" }, 10.9);
+tl.from("#s2-p2", { y: 40, opacity: 0, duration: 0.9, ease: "power3.out" }, 15.5);
 
 /* S3 STATUS QUO */
-xfade("#s2", "#s3", 32.5);
-tl.from("#s3-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 33.2);
-tl.from("#s3-h", { y: 46, opacity: 0, duration: 0.9, ease: "expo.out" }, 33.6);
-tl.from("#s3-a", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 36.4);
-tl.from("#s3-b", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 38.4);
-tl.from("#s3-p", { y: 30, opacity: 0, duration: 0.8, ease: "power2.out" }, 42.6);
+xfade("#s2", "#s3", 23.0);
+tl.from("#s3-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 23.7);
+tl.from("#s3-h", { y: 46, opacity: 0, duration: 0.9, ease: "expo.out" }, 24.1);
+tl.from("#s3-a", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 26.4);
+tl.from("#s3-b", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 27.8);
+tl.from("#s3-p", { y: 30, opacity: 0, duration: 0.8, ease: "power2.out" }, 31.0);
 
 /* S4 MANDATE */
-xfade("#s3", "#s4", 50.5);
-tl.from("#s4-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 51.2);
-tl.from("#s4-h", { y: 50, opacity: 0, duration: 0.9, ease: "expo.out" }, 51.6);
-tl.from("#s4-a", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 54.6);
-tl.from("#s4-b", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 55.6);
-tl.from("#s4-c", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 56.6);
-tl.from("#s4-p", { y: 32, opacity: 0, duration: 0.9, ease: "power2.out" }, 60.4);
+xfade("#s3", "#s4", 36.0);
+tl.from("#s4-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 36.7);
+tl.from("#s4-h", { y: 50, opacity: 0, duration: 0.9, ease: "expo.out" }, 37.1);
+tl.from("#s4-a", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 39.6);
+tl.from("#s4-b", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 40.6);
+tl.from("#s4-c", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 41.6);
+tl.from("#s4-p", { y: 32, opacity: 0, duration: 0.9, ease: "power2.out" }, 45.0);
 
 /* S5 LLM RANKS */
-xfade("#s4", "#s5", 73.5);
-tl.from("#s5-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 74.2);
-tl.from("#s5-h", { y: 48, opacity: 0, duration: 0.9, ease: "expo.out" }, 74.6);
-tl.from("#s5-a", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 78.0);
-tl.from("#s5-b", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 80.4);
-tl.from("#s5-p", { y: 32, opacity: 0, duration: 0.9, ease: "power2.out" }, 87.0);
+xfade("#s4", "#s5", 54.0);
+tl.from("#s5-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 54.7);
+tl.from("#s5-h", { y: 48, opacity: 0, duration: 0.9, ease: "expo.out" }, 55.1);
+tl.from("#s5-a", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 57.6);
+tl.from("#s5-b", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 59.6);
+tl.from("#s5-p", { y: 32, opacity: 0, duration: 0.9, ease: "power2.out" }, 64.5);
 
 /* S6 THE RESCUE */
-xfade("#s5", "#s6", 100.5);
-tl.from("#s6-pos", { x: -40, opacity: 0, duration: 0.7, ease: "power3.out" }, 101.3);
-tl.from("#s6-man", { x: -40, opacity: 0, duration: 0.7, ease: "power3.out" }, 101.7);
-tl.from(".gaugebox", { opacity: 0, duration: 0.7, ease: "power2.out" }, 102.1);
+xfade("#s5", "#s6", 74.0);
+tl.from("#s6-pos", { x: -40, opacity: 0, duration: 0.7, ease: "power3.out" }, 74.8);
+tl.from("#s6-man", { x: -40, opacity: 0, duration: 0.7, ease: "power3.out" }, 75.2);
+tl.from(".gaugebox", { opacity: 0, duration: 0.7, ease: "power2.out" }, 75.6);
 // drift across the trigger
 var hfDown = { v: 1.234 };
-tl.to("#s6-fill", { scaleY: scy(1.120), duration: 3.0, ease: "power1.inOut" }, 106.0);
+tl.to("#s6-fill", { scaleY: scy(1.120), duration: 3.0, ease: "power1.inOut" }, 78.5);
 tl.to(hfDown, { v: 1.120, duration: 3.0, ease: "power1.inOut",
-  onUpdate: function(){ document.getElementById("s6-hfnum").textContent = hfDown.v.toFixed(3); } }, 106.0);
-tl.to("#s6-fill", { background: "linear-gradient(180deg, #f97316, #f59e0b)", duration: 0.6 }, 107.8);
+  onUpdate: function(){ document.getElementById("s6-hfnum").textContent = hfDown.v.toFixed(3); } }, 78.5);
+tl.to("#s6-fill", { background: "linear-gradient(180deg, #f97316, #f59e0b)", duration: 0.6 }, 80.3);
 tl.to("#s6-pill", { color: "#f59e0b", borderColor: "rgba(245,158,11,.5)", duration: 0.4,
-  onStart: function(){ document.getElementById("s6-pill").textContent = "At risk"; } }, 108.2);
+  onStart: function(){ document.getElementById("s6-pill").textContent = "At risk"; } }, 80.7);
 // keeper stages
-tl.fromTo("#s6-e1", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 110.5);
-tl.fromTo("#s6-e2", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 114.0);
-tl.fromTo("#s6-e3", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 120.5);
-tl.fromTo("#s6-e4", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 129.0);
+tl.fromTo("#s6-e1", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 82.5);
+tl.fromTo("#s6-e2", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 85.5);
+tl.fromTo("#s6-e3", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 90.0);
+tl.fromTo("#s6-e4", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 96.0);
 // restored
 var hfUp = { v: 1.120 };
-tl.to("#s6-fill", { scaleY: scy(1.380), background: "linear-gradient(180deg, #2dd4bf, #0f766e)", duration: 1.2, ease: "power3.out" }, 132.0);
+tl.to("#s6-fill", { scaleY: scy(1.380), background: "linear-gradient(180deg, #2dd4bf, #0f766e)", duration: 1.2, ease: "power3.out" }, 99.5);
 tl.to(hfUp, { v: 1.380, duration: 1.2, ease: "power3.out",
-  onUpdate: function(){ document.getElementById("s6-hfnum").textContent = hfUp.v.toFixed(3); } }, 132.0);
+  onUpdate: function(){ document.getElementById("s6-hfnum").textContent = hfUp.v.toFixed(3); } }, 99.5);
 tl.to("#s6-pill", { color: "#2dd4bf", borderColor: "rgba(45,212,191,.5)", duration: 0.4,
-  onStart: function(){ document.getElementById("s6-pill").textContent = "Rescued"; } }, 132.8);
+  onStart: function(){ document.getElementById("s6-pill").textContent = "Rescued"; } }, 100.3);
 
 /* S7 PROOF */
-xfade("#s6", "#s7", 143.5);
-tl.from("#s7-k",  { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 144.2);
-tl.from("#s7-h",  { y: 50, opacity: 0, duration: 0.9, ease: "expo.out" }, 144.6);
-tl.from("#s7-a",  { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 147.2);
-tl.from("#s7-b",  { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 148.0);
-tl.from("#s7-c",  { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 148.8);
-tl.from("#s7-tx", { opacity: 0, duration: 0.9, ease: "power2.out" }, 151.0);
+xfade("#s6", "#s7", 108.0);
+tl.from("#s7-k",  { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 108.7);
+tl.from("#s7-h",  { y: 50, opacity: 0, duration: 0.9, ease: "expo.out" }, 109.1);
+tl.from("#s7-a",  { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 111.4);
+tl.from("#s7-b",  { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 112.2);
+tl.from("#s7-c",  { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 113.0);
+tl.from("#s7-tx", { opacity: 0, duration: 0.9, ease: "power2.out" }, 115.0);
 
 /* S11 CHEAPEST != BEST */
-xfade("#s7", "#s11", 161.5);
-tl.from("#s11-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 162.2);
-tl.from("#s11-h", { y: 46, opacity: 0, duration: 0.9, ease: "expo.out" }, 162.6);
-tl.from("#s11-t", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 165.4);
-tl.from("#s11-m", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 167.4);
-tl.from("#s11-p", { y: 30, opacity: 0, duration: 0.9, ease: "power2.out" }, 172.0);
+xfade("#s7", "#s11", 122.0);
+tl.from("#s11-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 122.7);
+tl.from("#s11-h", { y: 46, opacity: 0, duration: 0.9, ease: "expo.out" }, 123.1);
+tl.from("#s11-t", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 125.9);
+tl.from("#s11-m", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 127.9);
+tl.from("#s11-p", { y: 30, opacity: 0, duration: 0.9, ease: "power2.out" }, 132.0);
 
 /* S12 COUNTERFACTUAL */
-xfade("#s11", "#s12", 177.0);
-tl.from("#s12-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 177.7);
-tl.from("#s12-h", { y: 44, opacity: 0, duration: 0.8, ease: "expo.out" }, 178.1);
-tl.from("#s12-a", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 180.4);
-tl.from("#s12-b", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 182.0);
-tl.from("#s12-p", { y: 30, opacity: 0, duration: 0.9, ease: "power2.out" }, 186.0);
+xfade("#s11", "#s12", 137.0);
+tl.from("#s12-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 137.7);
+tl.from("#s12-h", { y: 44, opacity: 0, duration: 0.8, ease: "expo.out" }, 138.1);
+tl.from("#s12-a", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 140.4);
+tl.from("#s12-b", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 142.0);
+tl.from("#s12-p", { y: 30, opacity: 0, duration: 0.9, ease: "power2.out" }, 146.0);
 
 /* S10 AGENT STACK */
-xfade("#s12", "#s10", 190.0);
-tl.from("#s10-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 190.7);
-tl.from("#s10-h", { y: 46, opacity: 0, duration: 0.9, ease: "expo.out" }, 191.1);
-tl.from("#s10-a", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 193.9);
-tl.from("#s10-b", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 195.9);
-tl.from("#s10-p", { y: 30, opacity: 0, duration: 0.9, ease: "power2.out" }, 199.5);
+xfade("#s12", "#s10", 150.0);
+tl.from("#s10-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 150.7);
+tl.from("#s10-h", { y: 46, opacity: 0, duration: 0.9, ease: "expo.out" }, 151.1);
+tl.from("#s10-a", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 153.4);
+tl.from("#s10-b", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 155.0);
+tl.from("#s10-p", { y: 30, opacity: 0, duration: 0.9, ease: "power2.out" }, 157.5);
 
 /* S8 WHY ARC */
-xfade("#s10", "#s8", 204.5);
-tl.from("#s8-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 205.2);
-tl.from("#s8-h", { y: 44, opacity: 0, duration: 0.8, ease: "expo.out" }, 205.6);
-tl.from("#s8-a", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 207.6);
-tl.from("#s8-b", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 208.4);
-tl.from("#s8-c", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 209.2);
+xfade("#s10", "#s8", 161.0);
+tl.from("#s8-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 161.7);
+tl.from("#s8-h", { y: 44, opacity: 0, duration: 0.8, ease: "expo.out" }, 162.1);
+tl.from("#s8-a", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 164.0);
+tl.from("#s8-b", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 164.8);
+tl.from("#s8-c", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 165.6);
 
 /* S9 CLOSE */
-xfade("#s8", "#s9", 215.5);
-tl.from("#s9-h",     { y: 44, opacity: 0, duration: 0.9, ease: "expo.out" }, 216.2);
-tl.from("#s9-line",  { scaleX: 0, duration: 0.8, ease: "expo.out" }, 217.1);
-tl.from("#s9-tag",   { y: 32, opacity: 0, duration: 0.8, ease: "power3.out" }, 217.7);
-tl.from("#s9-mark",  { y: 40, opacity: 0, duration: 0.9, ease: "power3.out" }, 218.7);
-tl.from("#s9-links", { opacity: 0, duration: 0.8, ease: "power2.out" }, 219.7);
+xfade("#s8", "#s9", 171.0);
+tl.from("#s9-h",     { y: 44, opacity: 0, duration: 0.9, ease: "expo.out" }, 171.7);
+tl.from("#s9-line",  { scaleX: 0, duration: 0.8, ease: "expo.out" }, 172.6);
+tl.from("#s9-tag",   { y: 32, opacity: 0, duration: 0.8, ease: "power3.out" }, 173.2);
+tl.from("#s9-mark",  { y: 40, opacity: 0, duration: 0.9, ease: "power3.out" }, 174.2);
+tl.from("#s9-meta",  { y: 26, opacity: 0, duration: 0.8, ease: "power2.out" }, 175.2);
+tl.from("#s9-links", { opacity: 0, duration: 0.8, ease: "power2.out" }, 176.2);
 
 window.__timelines["main"] = tl;
 </script>
