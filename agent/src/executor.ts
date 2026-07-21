@@ -8,6 +8,7 @@ import { mandateAbi, miniSwapAbi } from "./abi.ts";
 import type { Deployment } from "./config.ts";
 import type { Plan, Terms, Signals, Address } from "./types.ts";
 import { spendOf } from "./strategist.ts";
+import { rpcRetry } from "./monitor.ts";
 import { ACTION } from "./types.ts";
 
 export interface RescueResult {
@@ -24,9 +25,9 @@ async function finalizePlan(dep: Deployment, plan: Plan, s: Signals): Promise<Pl
   if (plan.action !== ACTION.ROTATE) return plan;
   const pc = publicClient();
   const usdcOut = s.quoteUsdcOut(plan.collateralToken, plan.collateralAmount);
-  const tokenOut = (await pc.readContract({
+  const tokenOut = (await rpcRetry(() => pc.readContract({
     address: dep.amm, abi: miniSwapAbi, functionName: "getTokenOut", args: [plan.rotateTo, usdcOut],
-  })) as bigint;
+  }))) as bigint;
   return { ...plan, minSwapOut2: (tokenOut * 99n) / 100n };
 }
 
@@ -54,7 +55,10 @@ export async function executeRescue(
     functionName: "rescue",
     args: [user, structToTuple(finalized)],
   });
-  const receipt = await pc.waitForTransactionReceipt({ hash });
+  // The write itself we do NOT retry (a blind resend risks a double-send); but
+  // waiting for the receipt is a read that Arc's burst limiter can 200-error, so
+  // wrap it — the tx is already on-chain, we're only polling for it.
+  const receipt = await rpcRetry(() => pc.waitForTransactionReceipt({ hash }));
   if (receipt.status !== "success") throw new Error(`rescue tx reverted: ${hash}`);
 
   // read the emitted RescueExecuted for the authoritative before/after/spent

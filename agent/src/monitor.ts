@@ -130,18 +130,26 @@ function makeCachedQuoter(dep: Deployment, cs: Collateral[]) {
     await mapLimit(jobs, 4); // ≤4 concurrent calls — under the RPC burst cap
   }
 
-  // Synchronous lookup: snap the requested amount to the nearest warmed probe.
+  // Synchronous lookup: linearly interpolate between the two warmed probes that
+  // bracket `amt`. Snapping to the nearest probe gave unbounded RELATIVE error
+  // for small amounts (the snap distance is a fraction of the whole balance);
+  // interpolation on the smooth constant-product curve keeps the error bounded.
   function fn(token: Address, amt: bigint): bigint {
     const c = cs.find((x) => x.token === token);
-    if (!c || c.amount === 0n) return 0n;
-    let bestK = "";
-    let bestDiff = -1n;
-    for (let i = 1; i <= STEPS; i++) {
-      const probe = (c.amount * BigInt(i)) / BigInt(STEPS);
-      const diff = probe > amt ? probe - amt : amt - probe;
-      if (bestDiff < 0n || diff < bestDiff) { bestDiff = diff; bestK = key(token, probe); }
-    }
-    return cache.get(bestK) ?? 0n;
+    if (!c || c.amount === 0n || amt <= 0n) return 0n;
+    const a = amt > c.amount ? c.amount : amt;
+    const S = BigInt(STEPS);
+    // smallest probe index i (1..STEPS) whose amount >= a
+    let iHi = (a * S + c.amount - 1n) / c.amount; // ceil(a/step)
+    if (iHi < 1n) iHi = 1n;
+    if (iHi > S) iHi = S;
+    const iLo = iHi - 1n; // 0..STEPS-1  (0 ⇒ the origin, out = 0)
+    const probeHi = (c.amount * iHi) / S;
+    const probeLo = (c.amount * iLo) / S;
+    const outHi = cache.get(key(token, probeHi)) ?? 0n;
+    const outLo = iLo === 0n ? 0n : (cache.get(key(token, probeLo)) ?? 0n);
+    if (probeHi <= probeLo) return outHi;
+    return outLo + ((outHi - outLo) * (a - probeLo)) / (probeHi - probeLo);
   }
 
   return { warm, fn };

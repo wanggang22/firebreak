@@ -19,7 +19,7 @@ import { loadDeployment } from "./config.ts";
 import { tick } from "./keeper.ts";
 import { makeClaudeRanker } from "./llm.ts";
 import { computeCandidates } from "./strategist.ts";
-import { readSignals, readTerms } from "./monitor.ts";
+import { readSignals, readTerms, rpcRetry } from "./monitor.ts";
 import { publicClient } from "./chain.ts";
 import { miniLendAbi } from "./abi.ts";
 import { ACTION, type Address } from "./types.ts";
@@ -62,10 +62,12 @@ async function main() {
     process.exit(1);
   }
 
-  // Independent on-chain re-read of HF after the rescue (don't trust our own event).
-  const hfVerified = (await publicClient().readContract({
+  // Independent on-chain re-read of HF after the rescue (don't trust our own
+  // event). Wrapped in rpcRetry so a rate-limit blip after a SUCCESSFUL rescue
+  // can't crash us before the evidence file is written.
+  const hfVerified = (await rpcRetry(() => publicClient().readContract({
     address: dep.pool, abi: miniLendAbi, functionName: "healthFactor", args: [alice],
-  })) as bigint;
+  }))) as bigint;
 
   const r = outcome.rescue;
   const chosenAction = ACTION_NAME[decodeChosen(outcome.memo)] ?? "?";

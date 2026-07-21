@@ -310,11 +310,16 @@ function cheapest(cs: Candidate[]): Candidate | null {
 }
 void cheapest;
 
-/** USDC value moved by a plan (used for the spend-cap pre-check). */
+/** Value moved by a plan, for the OFF-CHAIN spend-cap pre-check. Mirrors the
+ *  contract exactly: the cap is enforced on the ORACLE VALUE of collateral
+ *  pulled (not the swap's USDC output, which a keeper could manipulate), so we
+ *  price the collateral at the oracle, independent of any AMM quote. TOP-UP
+ *  moves the reserve USDC it repays. */
 export function spendOf(p: Plan, s: Signals): bigint {
   if (p.action === ACTION.TOPUP) return p.topUpAmount;
-  // deleverage/rotate: the USDC proceeds of the first swap leg
-  return s.quoteUsdcOut(p.collateralToken, p.collateralAmount);
+  const c = s.collaterals.find((x) => x.token === p.collateralToken);
+  if (!c) return 0n;
+  return (p.collateralAmount * c.priceWad) / WAD;
 }
 
 /* ── helpers ─────────────────────────────────────────── */
