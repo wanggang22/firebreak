@@ -49,16 +49,24 @@ async function main() {
     await waitUp();
     const s0 = await fetch(BASE + "/api/state").then((r) => r.json());
     check("starts healthy (HF > trigger)", s0.hf > s0.trigger, `hf=${s0.hf}`);
+    check("starts UNSIGNED (operator must sign)", s0.mandateActive === false, `active=${s0.mandateActive}`);
+
+    const signed = await fetch(BASE + "/api/register", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ triggerWad: "1200000000000000000", spendCapWad: "5000000000000000000000", reserveWad: "200000000000000000000", allowedActions: 7 }),
+    }).then((r) => r.json());
+    check("signing the Mandate lands on-chain", signed.mandateActive === true, `active=${signed.mandateActive}`);
+    const trigger = signed.trigger; // terms only exist once signed
 
     const drift = await fetch(BASE + "/api/drift", { method: "POST" }).then((r) => r.json());
-    check("drift crosses the trigger", drift.hf < s0.trigger, `hf=${drift.hf}`);
+    check("drift crosses the trigger", drift.hf < trigger, `hf=${drift.hf} trigger=${trigger}`);
 
     const st = await sseRescue();
     check("streamed candidates", Array.isArray((st.candidates as any)?.viable) && (st.candidates as any).viable.length >= 1);
     check("streamed an llm/strategist choice", Boolean((st.llm as any)?.chosenAction));
     check("streamed an executor tx", typeof (st.executor as any)?.txHash === "string");
     const after = Number((st.restored as any)?.hfAfter) / 1e18;
-    check("restored HF above trigger", after > s0.trigger, `after=${after}`);
+    check("restored HF above trigger", after > trigger, `after=${after}`);
 
     const reset = await fetch(BASE + "/api/reset", { method: "POST" }).then((r) => r.json());
     check("reset returns to healthy", reset.hf > reset.trigger, `hf=${reset.hf}`);

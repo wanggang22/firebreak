@@ -9,7 +9,7 @@ import { dirname, resolve } from "node:path";
 import { loadDeployment } from "./config.ts";
 import { readSignals, readTerms } from "./monitor.ts";
 import { walletFor, publicClient } from "./chain.ts";
-import { oracleAbi } from "./abi.ts";
+import { oracleAbi, mandateAbi } from "./abi.ts";
 import { tick, type Stage } from "./keeper.ts";
 import { makeClaudeRanker } from "./llm.ts";
 import { ACTION, type Address } from "./types.ts";
@@ -48,7 +48,12 @@ function json(res: ServerResponse, code: number, body: unknown) {
 }
 
 async function snapshot() {
-  const [s, t] = await Promise.all([readSignals(DEP, USER), readTerms(DEP, USER)]);
+  const [s, t, mo] = await Promise.all([
+    readSignals(DEP, USER),
+    readTerms(DEP, USER),
+    publicClient().readContract({ address: DEP.mandate, abi: mandateAbi, functionName: "mandateOf", args: [USER] }),
+  ]);
+  const mandateActive = (mo as readonly [unknown, boolean, bigint])[1];
   const collateral = s.collaterals.find((c) => c.amount > 0n) ?? s.collaterals[0];
   const hf = Number(s.hf) / 1e18;
   const trigger = Number(t.hfTriggerWad) / 1e18;
@@ -57,6 +62,7 @@ async function snapshot() {
     phase,
     hf,
     trigger,
+    mandateActive,
     position: {
       symbol: collateral.symbol,
       amount: fmt(collateral.amount),
@@ -86,6 +92,60 @@ const setHealthy = () => setPrice(HEALTHY_PRICE);
 /** The operator-triggered FX drift that pushes the position past the trigger. */
 const applyDrift = () => setPrice(DRIFT_PRICE);
 
+function readBody(req: IncomingMessage): Promise<any> {
+  return new Promise((res, rej) => {
+    let b = "";
+    req.on("data", (c) => (b += c));
+    req.on("end", () => { try { res(b ? JSON.parse(b) : {}); } catch (e) { rej(e); } });
+    req.on("error", rej);
+  });
+}
+
+/** Start the demo UNSIGNED so the operator experiences signing. DemoSetup
+ *  pre-registers a mandate for a working out-of-the-box rescue; revoke it after
+ *  each deploy/reset so the dashboard opens with "Sign your Mandate". */
+async function revokeIfActive(): Promise<void> {
+  const pc = publicClient();
+  const [, active] = (await pc.readContract({
+    address: DEP.mandate, abi: mandateAbi, functionName: "mandateOf", args: [USER],
+  })) as readonly [unknown, boolean, bigint];
+  if (!active) return;
+  const alice = walletFor(ANVIL.alicePk as `0x${string}`);
+  const h = await alice.writeContract({ address: DEP.mandate, abi: mandateAbi, functionName: "revoke", args: [] });
+  await pc.waitForTransactionReceipt({ hash: h });
+}
+
+/** The borrower signs their Mandate: the bounds they choose land on-chain as a
+ *  real register() tx from their own account. If one is already active, revoke
+ *  it first (which refunds the old reserve) — so re-signing is safe. On the
+ *  devnet the server holds the borrower's key; on mainnet this is a wallet sig. */
+async function signMandate(body: {
+  triggerWad?: string; spendCapWad?: string; reserveWad?: string; allowedActions?: number;
+}): Promise<void> {
+  const alice = walletFor(ANVIL.alicePk as `0x${string}`);
+  const pc = publicClient();
+  const [, active] = (await pc.readContract({
+    address: DEP.mandate, abi: mandateAbi, functionName: "mandateOf", args: [USER],
+  })) as readonly [unknown, boolean, bigint];
+  if (active) {
+    const h = await alice.writeContract({ address: DEP.mandate, abi: mandateAbi, functionName: "revoke", args: [] });
+    await pc.waitForTransactionReceipt({ hash: h });
+  }
+  const terms = {
+    pool: DEP.pool, swapVenue: DEP.amm, keeper: ANVIL.keeperAddr as Address,
+    hfTrigger: BigInt(body.triggerWad ?? "1200000000000000000"),
+    maxSpendPerRescue: BigInt(body.spendCapWad ?? "5000000000000000000000"),
+    maxSlippageWad: 20000000000000000n, // 0.02
+    minImprovementWad: 20000000000000000n, // 0.02
+    allowedActions: Number(body.allowedActions ?? (ACTION.DELEVERAGE | ACTION.ROTATE | ACTION.TOPUP)),
+  };
+  const hash = await alice.writeContract({
+    address: DEP.mandate, abi: mandateAbi, functionName: "register",
+    args: [terms], value: BigInt(body.reserveWad ?? "200000000000000000000"),
+  });
+  await pc.waitForTransactionReceipt({ hash });
+}
+
 const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   try {
@@ -101,6 +161,10 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
       const p = JSON.parse(readFileSync(resolve(__dir, "../evidence/run-testnet-001.json"), "utf8"));
       return json(res, 200, p);
     }
+    if (req.method === "POST" && url.pathname === "/api/register") {
+      await signMandate(await readBody(req));
+      return json(res, 200, await snapshot());
+    }
     if (req.method === "POST" && url.pathname === "/api/drift") {
       const hf = await applyDrift();
       return json(res, 200, { hf });
@@ -108,6 +172,7 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
     if (req.method === "POST" && url.pathname === "/api/reset") {
       await deployScenario();
       await setHealthy();
+      await revokeIfActive();
       return json(res, 200, await snapshot());
     }
     if (req.method === "GET" && url.pathname === "/api/rescue") {
@@ -144,6 +209,7 @@ async function main() {
   console.log("[server] deploying local scenario (anvil + DemoSetup)...");
   await deployScenario();
   await setHealthy();
+  await revokeIfActive(); // open the dashboard unsigned — the operator signs
   server.listen(PORT, () => console.log(`[server] http://localhost:${PORT}`));
 }
 process.on("SIGINT", () => { stopScenario(); process.exit(0); });

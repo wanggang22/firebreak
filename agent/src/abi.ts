@@ -29,7 +29,26 @@ const planComponents = [
   { name: "topUpAmount", type: "uint256" },
 ] as const;
 
+const termsComponents = [
+  { name: "pool", type: "address" },
+  { name: "swapVenue", type: "address" },
+  { name: "keeper", type: "address" },
+  { name: "hfTrigger", type: "uint256" },
+  { name: "maxSpendPerRescue", type: "uint256" },
+  { name: "maxSlippageWad", type: "uint256" },
+  { name: "minImprovementWad", type: "uint256" },
+  { name: "allowedActions", type: "uint8" },
+] as const;
+
 export const mandateAbi = [
+  {
+    type: "function",
+    name: "register",
+    stateMutability: "payable",
+    inputs: [{ name: "terms", type: "tuple", components: termsComponents }],
+    outputs: [],
+  },
+  { type: "function", name: "revoke", stateMutability: "nonpayable", inputs: [], outputs: [] },
   {
     type: "function",
     name: "rescue",
