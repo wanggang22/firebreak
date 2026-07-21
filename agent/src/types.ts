@@ -24,7 +24,9 @@ export interface Signals {
 
 export interface Terms {
   hfTriggerWad: bigint;
-  maxSpendPerRescue: bigint;
+  maxSpendPerRescue: bigint; // max collateral VALUE (oracle) moved per rescue
+  maxSlippageWad: bigint; // swap must recover >= (1 - this) of collateral value
+  minImprovementWad: bigint; // rescue must lift HF by at least this
   allowedActions: number; // bitmask
   reserve: bigint; // prepaid native USDC
 }

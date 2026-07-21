@@ -59,6 +59,8 @@ contract DemoTestnet is Script {
                 keeper: keeper,
                 hfTrigger: 1.2e18,
                 maxSpendPerRescue: 50e18,
+                maxSlippageWad: 0.02e18,
+                minImprovementWad: 0.02e18,
                 allowedActions: 1 | 2 | 4
             })
         );

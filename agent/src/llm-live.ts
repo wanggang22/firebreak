@@ -53,6 +53,8 @@ async function main() {
   const t: Terms = {
     hfTriggerWad: (12n * WAD) / 10n,
     maxSpendPerRescue: 10_000n * WAD,
+    maxSlippageWad: WAD,
+    minImprovementWad: 0n,
     allowedActions: ACTION.DELEVERAGE | ACTION.ROTATE | ACTION.TOPUP,
     reserve: 500n * WAD,
   };

@@ -260,4 +260,9 @@ contract MiniLend is IPosition {
         (bool ok,) = to.call{value: amount}("");
         if (!ok) revert TransferFailed();
     }
+
+    /// @inheritdoc IPosition
+    function priceOf(address token) external view returns (uint256) {
+        return oracle.getPrice(token);
+    }
 }

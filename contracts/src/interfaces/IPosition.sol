@@ -11,6 +11,11 @@ interface IPosition {
 
     function collateralOf(address user, address token) external view returns (uint256);
 
+    /// @return WAD oracle price of `token` in native USDC. Firebreak values the
+    ///         collateral it moves through this, so the spend cap and slippage
+    ///         floor are enforced on real value, not on a keeper-chosen swap leg.
+    function priceOf(address token) external view returns (uint256);
+
     /// @return debt in native USDC wei.
     function debtOf(address user) external view returns (uint256);
 

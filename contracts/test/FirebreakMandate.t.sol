@@ -62,6 +62,19 @@ contract FirebreakMandateTest is Test {
     receive() external payable {}
 
     function _register(uint8 actions, uint256 maxSpend, uint256 reserveIn) internal {
+        // slippage floor off (1e18) and minImprovement 0 preserve the original
+        // behavior these legacy tests were written against; the security tests
+        // below set tight values explicitly.
+        _registerWith(actions, maxSpend, reserveIn, 1e18, 0);
+    }
+
+    function _registerWith(
+        uint8 actions,
+        uint256 maxSpend,
+        uint256 reserveIn,
+        uint256 maxSlippageWad,
+        uint256 minImprovementWad
+    ) internal {
         vm.prank(alice);
         fb.register{value: reserveIn}(
             FirebreakMandate.Terms({
@@ -70,6 +83,8 @@ contract FirebreakMandateTest is Test {
                 keeper: keeper,
                 hfTrigger: 1.2e18,
                 maxSpendPerRescue: maxSpend,
+                maxSlippageWad: maxSlippageWad,
+                minImprovementWad: minImprovementWad,
                 allowedActions: actions
             })
         );
@@ -329,10 +344,13 @@ contract FirebreakMandateTest is Test {
         _register(DELEVERAGE, cap, 0);
         _drift();
 
-        uint256 quote = amm.getUsdcOut(address(mEURC), amt);
+        // The cap is now enforced on the ORACLE VALUE of collateral pulled, not
+        // on the swap's USDC output — that is the whole point of the fix, so the
+        // boundary here is oracle-priced, independent of any AMM manipulation.
+        uint256 collValue = (amt * oracle.getPrice(address(mEURC))) / 1e18;
         FirebreakMandate.Plan memory plan = _delevPlan(amt);
         vm.prank(keeper);
-        if (quote > cap) {
+        if (collValue > cap) {
             vm.expectRevert(FirebreakMandate.SpendCapExceeded.selector);
             fb.rescue(alice, plan);
         } else {
@@ -345,5 +363,68 @@ contract FirebreakMandateTest is Test {
                 assertEq(bytes4(reason), FirebreakMandate.NoImprovement.selector);
             }
         }
+    }
+
+    /* ── security: bounds are USER-owned, not keeper-owned ── */
+
+    /// The headline guarantee. A malicious keeper sandwiches its own rescue:
+    /// front-runs the AMM to crater the rate, then deleverages with minSwapOut=0
+    /// to pull collateral value out cheaply. The user-signed slippage floor
+    /// (maxSlippageWad) must block it — proving the keeper cannot extract value
+    /// beyond what the user signed, even though it picks the plan and the venue.
+    function test_SlippageFloor_BlocksKeeperSandwich() public {
+        _registerWith(DELEVERAGE, 5000e18, 0, 0.02e18, 0); // user signs 2% max slippage
+        _drift(); // mEURC oracle price 0.98
+
+        // keeper is an ordinary address on a permissionless AMM: front-run to
+        // wreck the mEURC→USDC rate.
+        mEURC.mint(keeper, 5_000_000e18);
+        vm.startPrank(keeper);
+        mEURC.approve(address(amm), type(uint256).max);
+        amm.swapTokenForUsdc(address(mEURC), 4_000_000e18, 0);
+
+        // now deleverage Alice's collateral with the keeper's own (zero) guard.
+        FirebreakMandate.Plan memory plan = _delevPlan(100e18);
+        plan.minSwapOut = 0; // keeper waives its own protection — irrelevant now
+        vm.expectRevert(FirebreakMandate.SlippageExceeded.selector);
+        fb.rescue(alice, plan);
+        vm.stopPrank();
+    }
+
+    /// Re-registering must not silently orphan the existing reserve.
+    function test_RevertWhen_RegisterOverExistingMandate() public {
+        _register(TOPUP, 300e18, 100e18);
+        FirebreakMandate.Terms memory t = FirebreakMandate.Terms({
+            pool: address(pool),
+            swapVenue: address(amm),
+            keeper: keeper,
+            hfTrigger: 1.2e18,
+            maxSpendPerRescue: 300e18,
+            maxSlippageWad: 1e18,
+            minImprovementWad: 0,
+            allowedActions: TOPUP
+        });
+        vm.prank(alice);
+        vm.expectRevert(FirebreakMandate.AlreadyRegistered.selector);
+        fb.register{value: 50e18}(t);
+    }
+
+    /// A dust-sized rescue that barely nudges health must be rejected when the
+    /// user signed a minimum improvement — closing the fee-burn loop.
+    function test_MinImprovement_BlocksDustRescue() public {
+        _registerWith(TOPUP, 300e18, 100e18, 1e18, 0.5e18); // require HF +0.5
+        _drift(); // HF ~1.12
+        FirebreakMandate.Plan memory plan = FirebreakMandate.Plan({
+            action: TOPUP,
+            collateralToken: address(0),
+            collateralAmount: 0,
+            rotateTo: address(0),
+            minSwapOut: 0,
+            minSwapOut2: 0,
+            topUpAmount: 1e18 // tiny: lifts HF far less than the signed +0.5
+        });
+        vm.prank(keeper);
+        vm.expectRevert(FirebreakMandate.NoImprovement.selector);
+        fb.rescue(alice, plan);
     }
 }

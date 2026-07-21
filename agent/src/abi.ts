@@ -55,6 +55,8 @@ export const mandateAbi = [
           { name: "keeper", type: "address" },
           { name: "hfTrigger", type: "uint256" },
           { name: "maxSpendPerRescue", type: "uint256" },
+          { name: "maxSlippageWad", type: "uint256" },
+          { name: "minImprovementWad", type: "uint256" },
           { name: "allowedActions", type: "uint8" },
         ],
       },

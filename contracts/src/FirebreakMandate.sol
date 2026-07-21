@@ -33,6 +33,8 @@ contract FirebreakMandate is IRescueCallback {
     error ZeroAmount();
     error TransferFailed();
     error Reentrancy();
+    error AlreadyRegistered();
+    error SlippageExceeded();
 
     event MandateRegistered(address indexed user, Terms terms, uint256 reserve);
     event MandateRevoked(address indexed user, uint256 reserveReturned);
@@ -43,13 +45,16 @@ contract FirebreakMandate is IRescueCallback {
     uint8 public constant ACTION_DELEVERAGE = 1;
     uint8 public constant ACTION_ROTATE = 2;
     uint8 public constant ACTION_TOPUP = 4;
+    uint256 private constant WAD = 1e18;
 
     struct Terms {
         address pool; // IPosition to guard
         address swapVenue; // the ONLY venue rescues may route through
         address keeper; // the ONLY address allowed to trigger rescues
         uint256 hfTrigger; // WAD; rescue only when HF < this
-        uint256 maxSpendPerRescue; // native USDC value moved per rescue, max
+        uint256 maxSpendPerRescue; // max collateral VALUE (oracle) moved per rescue
+        uint256 maxSlippageWad; // WAD; the swap must return >= (1 - this) of the collateral's oracle value
+        uint256 minImprovementWad; // WAD; a rescue must raise HF by at least this much
         uint8 allowedActions; // bitmask of ACTION_*
     }
 
@@ -89,6 +94,10 @@ contract FirebreakMandate is IRescueCallback {
     /* ── user side ──────────────────────────────────────── */
 
     function register(Terms calldata terms) external payable {
+        // Never silently overwrite a live mandate — that would orphan the
+        // existing reserve. Revoke (which refunds) before re-registering, or
+        // use topUpReserve/withdrawReserve to adjust funds.
+        if (mandates[msg.sender].active) revert AlreadyRegistered();
         mandates[msg.sender] = State({terms: terms, active: true, reserve: msg.value});
         emit MandateRegistered(msg.sender, terms, msg.value);
     }
@@ -177,7 +186,9 @@ contract FirebreakMandate is IRescueCallback {
         if (spent > t.maxSpendPerRescue) revert SpendCapExceeded();
 
         uint256 hfAfter = pool.healthFactor(user);
-        if (hfAfter <= hfBefore) revert NoImprovement();
+        // Must be a *meaningful* jump, not a dust improvement — otherwise a
+        // keeper could loop tiny rescues, bleeding the position through fees.
+        if (hfAfter < hfBefore + t.minImprovementWad) revert NoImprovement();
 
         emit RescueExecuted(user, plan.action, spent, hfBefore, hfAfter);
     }
@@ -207,38 +218,55 @@ contract FirebreakMandate is IRescueCallback {
 
     /// @dev A: pull a slice of collateral → sell for USDC → repay debt.
     ///      Any proceeds beyond the outstanding debt land in the reserve.
+    ///      `spent` is the ORACLE VALUE of collateral pulled — that is the blast
+    ///      radius the user capped, and it can't be gamed by a keeper who
+    ///      sandwiches the swap to minimise the USDC leg. The swap must return
+    ///      at least (1 - maxSlippageWad) of that value, a floor the USER signed
+    ///      — the keeper's minSwapOut is only an extra, non-binding hint.
     function _deleverage(address user, State storage s, Terms memory t, Plan memory plan)
         internal
         returns (uint256 spent)
     {
         IPosition pool = IPosition(t.pool);
-        pool.rescuePull(plan.collateralToken, plan.collateralAmount, address(this));
+        uint256 collValue = (plan.collateralAmount * pool.priceOf(plan.collateralToken)) / WAD;
 
+        pool.rescuePull(plan.collateralToken, plan.collateralAmount, address(this));
         MockERC20(plan.collateralToken).approve(t.swapVenue, plan.collateralAmount);
         uint256 out = MiniSwap(payable(t.swapVenue))
             .swapTokenForUsdc(plan.collateralToken, plan.collateralAmount, plan.minSwapOut);
+
+        // user-signed slippage floor on the value actually recovered
+        if (out < (collValue * (WAD - t.maxSlippageWad)) / WAD) revert SlippageExceeded();
 
         uint256 debt = pool.debtOf(user);
         uint256 pay = out > debt ? debt : out;
         pool.repayFor{value: pay}(user);
         if (out > pay) s.reserve += out - pay; // surplus stays the user's
-        return out;
+        return collValue;
     }
 
     /// @dev B: pull drifting collateral → swap to USDC → swap to the steadier
-    ///      asset → deposit back into the user's position.
+    ///      asset → deposit back into the user's position. Same value-based cap
+    ///      and user-signed round-trip slippage floor as deleverage: the user
+    ///      must end up with at least (1 - maxSlippageWad) of the moved value in
+    ///      the new asset, so a keeper can't rotate value away via two swaps.
     function _rotate(address user, Terms memory t, Plan memory plan) internal returns (uint256 spent) {
         IPosition pool = IPosition(t.pool);
-        pool.rescuePull(plan.collateralToken, plan.collateralAmount, address(this));
+        uint256 collValue = (plan.collateralAmount * pool.priceOf(plan.collateralToken)) / WAD;
 
+        pool.rescuePull(plan.collateralToken, plan.collateralAmount, address(this));
         MockERC20(plan.collateralToken).approve(t.swapVenue, plan.collateralAmount);
         MiniSwap venue = MiniSwap(payable(t.swapVenue));
         uint256 usdcOut = venue.swapTokenForUsdc(plan.collateralToken, plan.collateralAmount, plan.minSwapOut);
         uint256 tokenOut = venue.swapUsdcForToken{value: usdcOut}(plan.rotateTo, plan.minSwapOut2);
 
+        // round-trip slippage floor on the VALUE that lands back in the position
+        uint256 gotValue = (tokenOut * pool.priceOf(plan.rotateTo)) / WAD;
+        if (gotValue < (collValue * (WAD - t.maxSlippageWad)) / WAD) revert SlippageExceeded();
+
         MockERC20(plan.rotateTo).approve(t.pool, tokenOut);
         pool.depositCollateralFor(user, plan.rotateTo, tokenOut);
-        return usdcOut;
+        return collValue;
     }
 
     /// @dev C: repay debt straight from the user's prepaid reserve.

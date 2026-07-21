@@ -99,7 +99,7 @@ const trigger = (12n * WAD) / 10n; // 1.2
 {
   const { cs, debt, quote, quoteToken } = scenario();
   const s: Signals = { user: EURC, hf: hfOf(debt, cs), debt, collaterals: cs, quoteUsdcOut: quote };
-  const t: Terms = { hfTriggerWad: trigger, maxSpendPerRescue: 10_000n * WAD, allowedActions: ACTION.DELEVERAGE, reserve: 0n };
+  const t: Terms = { hfTriggerWad: trigger, maxSpendPerRescue: 10_000n * WAD, maxSlippageWad: WAD, minImprovementWad: 0n, allowedActions: ACTION.DELEVERAGE, reserve: 0n };
   const d = decide(s, t);
   check("deleverage: plan produced", d.plan !== null);
   if (d.plan) {
@@ -114,7 +114,7 @@ const trigger = (12n * WAD) / 10n; // 1.2
 {
   const { cs, debt, quote } = scenario();
   const s: Signals = { user: EURC, hf: hfOf(debt, cs), debt, collaterals: cs, quoteUsdcOut: quote };
-  const t: Terms = { hfTriggerWad: trigger, maxSpendPerRescue: 10_000n * WAD, allowedActions: ACTION.DELEVERAGE | ACTION.TOPUP, reserve: 500n * WAD };
+  const t: Terms = { hfTriggerWad: trigger, maxSpendPerRescue: 10_000n * WAD, maxSlippageWad: WAD, minImprovementWad: 0n, allowedActions: ACTION.DELEVERAGE | ACTION.TOPUP, reserve: 500n * WAD };
   const d = decide(s, t);
   check("topup: chosen over deleverage (cheaper)", d.plan?.action === ACTION.TOPUP, `action=${d.plan?.action}`);
   if (d.plan) {
@@ -129,7 +129,7 @@ const trigger = (12n * WAD) / 10n; // 1.2
 {
   const { cs, debt, quote, quoteToken } = scenario();
   const s: Signals = { user: EURC, hf: hfOf(debt, cs), debt, collaterals: cs, quoteUsdcOut: quote };
-  const t: Terms = { hfTriggerWad: trigger, maxSpendPerRescue: 10_000n * WAD, allowedActions: ACTION.ROTATE, reserve: 0n };
+  const t: Terms = { hfTriggerWad: trigger, maxSpendPerRescue: 10_000n * WAD, maxSlippageWad: WAD, minImprovementWad: 0n, allowedActions: ACTION.ROTATE, reserve: 0n };
   const d = decide(s, t);
   check("rotate: plan produced", d.plan?.action === ACTION.ROTATE);
   if (d.plan) {
@@ -144,7 +144,7 @@ const trigger = (12n * WAD) / 10n; // 1.2
 {
   const { cs, debt, quote } = scenario();
   const s: Signals = { user: EURC, hf: hfOf(debt, cs), debt, collaterals: cs, quoteUsdcOut: quote };
-  const t: Terms = { hfTriggerWad: trigger, maxSpendPerRescue: 10n * WAD, allowedActions: ACTION.DELEVERAGE, reserve: 0n };
+  const t: Terms = { hfTriggerWad: trigger, maxSpendPerRescue: 10n * WAD, maxSlippageWad: WAD, minImprovementWad: 0n, allowedActions: ACTION.DELEVERAGE, reserve: 0n };
   const d = decide(s, t);
   check("spend cap: no plan when every path exceeds cap", d.plan === null, `plan=${JSON.stringify(d.plan)}`);
 }

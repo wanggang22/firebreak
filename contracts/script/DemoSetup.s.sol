@@ -61,6 +61,8 @@ contract DemoSetup is Script {
                 keeper: keeper,
                 hfTrigger: 1.2e18,
                 maxSpendPerRescue: 5000e18,
+                maxSlippageWad: 0.02e18, // swap must recover >= 98% of moved collateral value
+                minImprovementWad: 0.02e18, // a rescue must lift HF by >= 0.02
                 allowedActions: 1 | 2 | 4 // deleverage | rotate | topup
             })
         );

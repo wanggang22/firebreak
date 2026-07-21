@@ -82,7 +82,10 @@ export async function readTerms(dep: Deployment, user: Address): Promise<Terms> 
   const res = (await rpcRetry(() => pc.readContract({
     address: dep.mandate, abi: mandateAbi, functionName: "mandateOf", args: [user],
   }))) as readonly [
-    { pool: Address; swapVenue: Address; keeper: Address; hfTrigger: bigint; maxSpendPerRescue: bigint; allowedActions: number },
+    {
+      pool: Address; swapVenue: Address; keeper: Address; hfTrigger: bigint;
+      maxSpendPerRescue: bigint; maxSlippageWad: bigint; minImprovementWad: bigint; allowedActions: number;
+    },
     boolean,
     bigint,
   ];
@@ -90,6 +93,8 @@ export async function readTerms(dep: Deployment, user: Address): Promise<Terms> 
   return {
     hfTriggerWad: terms.hfTrigger,
     maxSpendPerRescue: terms.maxSpendPerRescue,
+    maxSlippageWad: terms.maxSlippageWad,
+    minImprovementWad: terms.minImprovementWad,
     allowedActions: terms.allowedActions,
     reserve,
   };
