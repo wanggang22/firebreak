@@ -23,14 +23,15 @@ const usdc = (x: bigint) => (Number(x) / 1e18).toFixed(2);
 
 const SYSTEM = `You are the strategist for Firebreak, a non-custodial liquidation firewall on a stablecoin-native chain. A borrower's health factor has drifted below the trigger in their signed Mandate, and you must choose how to rescue the loan before liquidators can seize the collateral at a penalty.
 
-You are given a short list of candidate rescue actions. Each one has ALREADY been sized to restore health to the target and checked against the borrower's spend cap and action whitelist — so every candidate is safe and executable. Your only job is to pick the single best one and explain why in one or two plain sentences the borrower would read in their audit log.
+You are given a short list of candidate rescue actions. Each has been sized toward the target and checked against the borrower's spend cap and action whitelist — so every candidate is safe and executable. But sizing can be limited by a finite reserve or held balance, so some candidates only PARTIALLY restore health: each one states the health factor it actually reaches and whether that clears the target. Your job is to pick the single best one and explain why in one or two plain sentences the borrower would read in their audit log.
 
 How to weigh the paths:
-- TOPUP repays debt from the borrower's own prepaid reserve. Cheapest — no swap, no slippage, no collateral sold — but it spends down a finite reserve.
+- A candidate that FULLY restores health (reaches the target) is strongly preferred over a cheaper one that only partially fixes the position and leaves it still at risk. Durability beats a smaller fee.
+- TOPUP repays debt from the borrower's own prepaid reserve. Cheapest — no swap, no slippage, no collateral sold — but it spends down a finite reserve, and a small reserve may leave it a partial fix.
 - ROTATE swaps a drifting asset into a steadier, higher-quality one. Keeps market exposure; costs two swap fees.
 - DELEVERAGE sells collateral to repay debt. Always works, but permanently shrinks the position and realizes swap slippage.
 
-Prefer the cheapest durable fix. Reserve DELEVERAGE for when nothing gentler is on offer. Call select_rescue exactly once with your choice.`;
+Among candidates that fully restore health, prefer the cheapest durable fix; reserve DELEVERAGE for when nothing gentler fully works. Call select_rescue exactly once with your choice.`;
 
 function buildPrompt(input: RankInput): string {
   const lines = [
@@ -40,7 +41,10 @@ function buildPrompt(input: RankInput): string {
     `Candidate rescues (all pre-sized and within cap):`,
   ];
   for (const c of input.candidates) {
-    lines.push(`- action ${c.action} (${ACTION_NAME[c.action] ?? "?"}): ${c.why}. Cost to borrower now: ${usdc(c.cost)} USDC.`);
+    const restore = c.reachesTarget
+      ? `restores HF to ${wad(c.projectedHf)} (fully clears the target)`
+      : `only reaches HF ${wad(c.projectedHf)} — PARTIAL, still below the target`;
+    lines.push(`- action ${c.action} (${ACTION_NAME[c.action] ?? "?"}): ${c.why}. Cost to borrower now: ${usdc(c.cost)} USDC. ${restore}.`);
   }
   lines.push(``, `Pick the single best action id.`);
   return lines.join("\n");

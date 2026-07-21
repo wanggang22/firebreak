@@ -64,6 +64,27 @@ function sizeDeleverage(s: Signals, c: Collateral, t: Terms): bigint {
 
 const withSlippage = (x: bigint) => (x * (10000n - SLIPPAGE_BPS)) / 10000n;
 
+/** WAD health factor from weighted collateral and debt (∞ when debt-free). */
+function hfFrom(weighted: bigint, debt: bigint): bigint {
+  return debt <= 0n ? 2n ** 255n : (weighted * WAD) / debt;
+}
+
+/** Finalize a candidate: record whether it reaches the target, and annotate the
+ *  `why` when a clamp (reserve / held balance / collateral balance) left it a
+ *  partial fix — so both the cheapest-rule and the LLM see the shortfall instead
+ *  of being told every path fully restores health. */
+function mark(
+  c: Omit<Candidate, "reachesTarget">,
+  target: bigint,
+  clamped: boolean,
+): Candidate {
+  const reachesTarget = c.projectedHf >= target;
+  const why = reachesTarget
+    ? c.why
+    : `${c.why} — PARTIAL: only reaches HF ${fmt(c.projectedHf)} (target ${fmt(target)}${clamped ? ", capped" : ""})`;
+  return { ...c, why, reachesTarget };
+}
+
 /** One viable rescue path: pre-sized to restore health, priced, and (in the
  *  returned set) already filtered to fit the spend cap. This is what the LLM
  *  ranks — it can only ever pick from these, never invent an unbounded action. */
@@ -72,6 +93,8 @@ export interface Candidate {
   plan: Plan; // fully sized, ready to execute
   cost: bigint; // USDC value the user gives up now (0 for TOP-UP)
   why: string; // one-line human description
+  projectedHf: bigint; // WAD; HF the position reaches if this plan executes
+  reachesTarget: boolean; // projectedHf >= target (a full fix, not a partial)
 }
 
 export interface CandidateSet {
@@ -111,12 +134,15 @@ export function computeCandidates(s: Signals, t: Terms): CandidateSet {
     const V = s.debt - (W * WAD) / target;
     const repay = clamp(V, 0n, min(t.reserve, s.debt));
     if (repay > 0n) {
-      cands.push({
+      // repaying `repay` leaves W unchanged, debt = D - repay
+      const projectedHf = hfFrom(W, s.debt - repay);
+      cands.push(mark({
         action: ACTION.TOPUP,
         plan: plan(ACTION.TOPUP, ZERO_ADDR, 0n, ZERO_ADDR, 0n, 0n, repay),
         cost: 0n, // reserve is the user's own money moved from idle to debt — no value lost
         why: `TOP-UP ${usdc(repay)} USDC from reserve (no swap, no slippage, no collateral sold)`,
-      });
+        projectedHf,
+      }, target, t.reserve < V));
     }
   }
 
@@ -139,15 +165,21 @@ export function computeCandidates(s: Signals, t: Terms): CandidateSet {
           if (moveValue > held) moveValue = held;
           const amt = (moveValue * WAD) / risky.priceWad;
           const usdcOut = s.quoteUsdcOut(risky.token, amt);
-          cands.push({
+          // moving `moveValue` from LT1→LT2 raises weighted collateral by
+          // moveValue*(LT2-LT1); debt is unchanged.
+          const newW = W + (moveValue * dLT) / WAD;
+          const projectedHf = hfFrom(newW, s.debt);
+          const capped = moveValue < (num * WAD) / dLT; // held-balance clamp bit
+          cands.push(mark({
             action: ACTION.ROTATE,
             plan: plan(
               ACTION.ROTATE, risky.token, amt, target2.token,
               withSlippage(usdcOut), 0n /* leg2 min filled by executor */, 0n,
             ),
-            cost: usdcOut - (usdcOut * 9970n) / 10000n, // ~0.3% x2 legs fee proxy
+            cost: (usdcOut * 60n) / 10000n, // ~0.3% x2 legs fee proxy (both legs)
             why: `ROTATE ${usdc(moveValue)} USDC of ${risky.symbol}(LT ${fmt(risky.ltWad)}) → ${target2.symbol}(LT ${fmt(target2.ltWad)})`,
-          });
+            projectedHf,
+          }, target, capped));
         }
       }
     }
@@ -159,12 +191,20 @@ export function computeCandidates(s: Signals, t: Terms): CandidateSet {
     const amt = sizeDeleverage(s, risky, t);
     if (amt > 0n) {
       const usdcOut = s.quoteUsdcOut(risky.token, amt);
-      cands.push({
+      const soldValue = (amt * risky.priceWad) / WAD;
+      // selling `soldValue` of risky removes soldValue*LT from weighted, and
+      // repays min(usdcOut, debt) of debt.
+      const newW = weightedCollateral(s.collaterals) - (soldValue * risky.ltWad) / WAD;
+      const newDebt = s.debt - (usdcOut < s.debt ? usdcOut : s.debt);
+      const projectedHf = hfFrom(newW, newDebt);
+      const capped = amt >= risky.amount; // hit the balance clamp
+      cands.push(mark({
         action: ACTION.DELEVERAGE,
         plan: plan(ACTION.DELEVERAGE, risky.token, amt, ZERO_ADDR, withSlippage(usdcOut), 0n, 0n),
         cost: usdcOut, // gives up this much collateral value now
-        why: `DELEVERAGE: sell ${usdc((amt * risky.priceWad) / WAD)} USDC of ${risky.symbol}, repay debt`,
-      });
+        why: `DELEVERAGE: sell ${usdc(soldValue)} USDC of ${risky.symbol}, repay debt`,
+        projectedHf,
+      }, target, capped));
     }
   }
 
@@ -197,11 +237,11 @@ export function decide(s: Signals, t: Terms): Decision {
   if (!set.triggered) {
     return { plan: null, memo: `HF ${fmt(s.hf)} ≥ trigger ${fmt(t.hfTriggerWad)} — no rescue needed.` };
   }
-  const chosen = cheapest(set.viable);
+  const chosen = pickBest(set.viable);
   if (!chosen) {
     return { plan: null, memo: `${set.notes.join(" ")} No path fits spend cap ${usdc(t.maxSpendPerRescue)} USDC.` };
   }
-  const notes = [...set.notes, `Chose ${chosen.why} — cheapest of ${set.viable.length} viable (cost ${usdc(chosen.cost)} USDC).`];
+  const notes = [...set.notes, `Chose ${chosen.why} — best of ${set.viable.length} viable (cost ${usdc(chosen.cost)} USDC, HF→${fmt(chosen.projectedHf)}).`];
   return { plan: chosen.plan, memo: notes.join(" ") };
 }
 
@@ -221,7 +261,7 @@ export async function decideWith(s: Signals, t: Terms, ranker: Ranker): Promise<
   if (set.viable.length === 0) {
     return { plan: null, memo: `${set.notes.join(" ")} No path fits spend cap ${usdc(t.maxSpendPerRescue)} USDC.` };
   }
-  const fallback = cheapest(set.viable)!;
+  const fallback = pickBest(set.viable)!;
   if (set.viable.length === 1) {
     const notes = [...set.notes, `Only one viable path: ${fallback.why} (cost ${usdc(fallback.cost)} USDC).`];
     return { plan: fallback.plan, memo: notes.join(" ") };
@@ -249,10 +289,26 @@ export async function decideWith(s: Signals, t: Terms, ranker: Ranker): Promise<
   }
 }
 
+/** The safe deterministic pick and fallback. A path that actually restores
+ *  health to the target always beats one that only partially fixes it — a
+ *  cheaper partial (e.g. a reserve-capped TOP-UP that undershoots) must never
+ *  win just because its fee is zero. Among full fixes, cheapest wins; if none
+ *  reach target, take the one that lifts health the most. */
+function pickBest(cs: Candidate[]): Candidate | null {
+  if (cs.length === 0) return null;
+  const full = cs.filter((c) => c.reachesTarget);
+  if (full.length) return full.reduce((a, b) => (b.cost < a.cost ? b : a));
+  return cs.reduce((a, b) =>
+    b.projectedHf > a.projectedHf ? b : b.projectedHf === a.projectedHf && b.cost < a.cost ? b : a,
+  );
+}
+
+/** Kept for tests/back-compat: the pure cheapest-by-cost among candidates. */
 function cheapest(cs: Candidate[]): Candidate | null {
   if (cs.length === 0) return null;
   return cs.reduce((a, b) => (b.cost < a.cost ? b : a));
 }
+void cheapest;
 
 /** USDC value moved by a plan (used for the spend-cap pre-check). */
 export function spendOf(p: Plan, s: Signals): bigint {

@@ -149,5 +149,23 @@ const trigger = (12n * WAD) / 10n; // 1.2
   check("spend cap: no plan when every path exceeds cap", d.plan === null, `plan=${JSON.stringify(d.plan)}`);
 }
 
+// REGRESSION (M2): a reserve-capped TOP-UP that undershoots must NOT beat a
+// ROTATE that actually restores health, even though TOP-UP costs 0. This is the
+// bug that once shipped: cheapest-by-cost picked a partial fix.
+{
+  const { cs, debt, quote, quoteToken } = scenario();
+  const s: Signals = { user: EURC, hf: hfOf(debt, cs), debt, collaterals: cs, quoteUsdcOut: quote };
+  // reserve only 50 USDC — far short of the ~132 needed to reach target via TOP-UP
+  const t: Terms = { hfTriggerWad: trigger, maxSpendPerRescue: 10_000n * WAD, maxSlippageWad: WAD, minImprovementWad: 0n, allowedActions: ACTION.TOPUP | ACTION.ROTATE, reserve: 50n * WAD };
+  const d = decide(s, t);
+  check("undershooting TOP-UP is not chosen over a full-fix ROTATE", d.plan?.action === ACTION.ROTATE, `chose action ${d.plan?.action}`);
+  if (d.plan) {
+    const after = simulate(debt, cs, 50n * WAD, d.plan, quote, quoteToken);
+    const hf2 = hfOf(after.debt, after.cs);
+    check("the chosen path actually clears the trigger", hf2 >= trigger, `HF=${fmt(hf2)}`);
+    console.log(`    ${d.memo}`);
+  }
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);
