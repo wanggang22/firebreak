@@ -1,0 +1,20 @@
+{
+  "note": "The counterfactual, executed on-chain (anvil, audited contract). Two identical positions — 100 mEURC collateral, 50 USDC debt — drift toward liquidation. One has a Firebreak Mandate, one does not. Same drift, opposite outcomes.",
+  "scenario": "mEURC LT 0.70 drifts 1.08 -> 0.85 (both cross Alice's 1.20 trigger) -> 0.55 (Bob crosses HF < 1.0)",
+  "protected": {
+    "who": "Alice — signed a Firebreak Mandate (DELEVERAGE allowed, trigger 1.20)",
+    "action": "keeper deleveraged at the trigger — sold 17 mEURC, repaid ~19 USDC of debt",
+    "collateralKept": "83 of 100 mEURC",
+    "debt": "50 -> 31 USDC",
+    "hfAt055": "1.008 — never liquidated",
+    "cost": "an early, bounded deleverage (swap fee ~0.3%); position stays solvent"
+  },
+  "unprotected": {
+    "who": "Bob — identical position, NO Mandate",
+    "outcome": "rode the drift to HF 0.77 and was liquidated",
+    "collateralSeized": "all 100 of 100 mEURC — the liquidator seized 110% of the debt at the crashed price, taking the entire position to cover 50 USDC of debt",
+    "loss": "the whole leveraged position, plus the 10% liquidation penalty"
+  },
+  "takeaway": "Same starting position, same market. The firewall acted early at HF 1.20 and kept 83% of the collateral solvent; the unprotected twin lost 100% of it to a liquidation. Firebreak turns liquidation from the default outcome into the avoidable one.",
+  "reproduce": "contracts/script/DemoTwin.s.sol on anvil (--balance 1000000)"
+}

@@ -84,6 +84,10 @@
   <p>On a stablecoin-native L1, collateral is FX and tokenized RWAs — EURC, T-bills, private credit. They don't gap down 40% in a candle. They <b>slide</b>: the euro moves two cents over a week, an RWA re-prices, interest accrues.</p>
   <p>Health factor walks slowly toward the line. A liquidator bot has been waiting for hours. It takes a <b class="ember">5–10% penalty</b> out of the borrower's collateral — for something a <b>0.94 USDC top-up</b> would have fixed.</p>
   <p style="margin-top:22px;color:var(--faint)">Nobody is watching their health factor at 3am. And handing a bot custody, or approving each transaction by hand, both defeat the purpose.</p>
+  <div class="card" style="margin-top:18px;border-color:rgba(249,115,22,.35)">
+    <h3 style="color:var(--ember)">the counterfactual, on-chain</h3>
+    <p style="font-size:18px">Two identical positions drift down. The <b class="ember">unprotected</b> one is liquidated — <b>all 100 mEURC seized</b>. Firebreak acts early at the trigger and the twin stays solvent — <b class="teal">83 mEURC kept, never liquidated</b>. Same market, opposite outcomes.</p>
+  </div>
 </section>
 
 <!-- 3 SOLUTION -->
@@ -253,6 +257,37 @@
     <div class="card"><h3>03 · USDC-denominated gas</h3><p>Keeper cost and borrower savings are in the same unit. You can decide whether a 0.94 USDC rescue is worth sending, without modeling a volatile gas token.</p></div>
   </div>
   <p style="margin-top:30px">Firebreak is not a generic DeFi app ported to Arc. Remove any one of these three and the product stops working.</p>
+</section>
+
+<!-- 9b COMPETITORS -->
+<section class="slide">
+  <div class="n">10</div>
+  <div class="kick">not the same as existing automation</div>
+  <h2>They bound <span class="amber">when</span>. We bound <span class="teal">when + how much + what</span>.</h2>
+  <table>
+    <tr><th></th><th>DeFi Saver · Instadapp · Summer.fi</th><th>Firebreak</th></tr>
+    <tr>
+      <td><b>authorization</b></td>
+      <td>Migrate the position into their smart wallet / proxy, or grant a broad automation executor</td>
+      <td class="ok">A per-position Mandate: trigger + spend cap + action whitelist + slippage floor, signed on-chain</td>
+    </tr>
+    <tr>
+      <td><b>where it's enforced</b></td>
+      <td>In their automation backend — you trust the bot to stay in scope</td>
+      <td class="ok">In the contract, at execution — the keeper is untrusted by construction</td>
+    </tr>
+    <tr>
+      <td><b>the rescue decision</b></td>
+      <td>Threshold triggers a preset action</td>
+      <td class="ok">An LLM ranks the vetted paths and writes an auditable memo — durability over cost</td>
+    </tr>
+    <tr>
+      <td><b>chain</b></td>
+      <td>EVM L2s built for volatile collateral that gaps</td>
+      <td class="ok">Arc — where FX/RWA collateral <b>drifts</b>, the case these products don't target</td>
+    </tr>
+  </table>
+  <p style="margin-top:22px;color:var(--faint)">The honest line: incumbents do store trigger params on-chain. What's new is that the *entire authority* — amount, action, slippage — is a bounded object the borrower signs, enforced by the contract, not a scope you trust an off-chain bot to respect.</p>
 </section>
 
 <!-- 10 ROADMAP -->

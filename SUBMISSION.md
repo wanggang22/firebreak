@@ -87,7 +87,16 @@ The obvious objection to an "AI agent" is *"you added an LLM to an if-statement.
 
 Executed: **HF 1.190 → 1.602**, the position genuinely rotated into ~59.8 mTBILL (verified on-chain). This is a real judgment the naive rule gets *wrong* — the value the model adds, in one transaction. ([evidence](agent/evidence/run-local-flagship.json), `contracts/script/DemoFlagship.s.sol`; same audited contract as the testnet heroes.)
 
-### 4. Tests and reproducibility
+### 4. The counterfactual — protected vs unprotected twin
+
+Two identical positions (100 mEURC collateral, 50 USDC debt) drift toward liquidation; one signs a Firebreak Mandate, one doesn't. Executed on-chain:
+
+- **Unprotected twin:** rode the drift to HF 0.77 and was **liquidated — all 100 mEURC seized** to cover the 50 USDC debt at the crashed price (110% penalty). The whole leveraged position, gone.
+- **Firebreak:** the keeper deleveraged *early* at the 1.20 trigger (sold 17 mEURC), and through the same drift the position stayed solvent — **kept 83 of 100 mEURC**, HF 1.008, never liquidated.
+
+Same market, opposite outcomes. The firewall acts early precisely so you never reach the liquidation line — which is also the honest answer to *"why rescue at 1.20 not 1.0?"* ([evidence](agent/evidence/run-local-twin.json), `contracts/script/DemoTwin.s.sol`).
+
+### 5. Tests and reproducibility
 
 - **Contracts:** 55 Foundry tests green, including fuzz — `FirebreakMandate`, `MiniLend` (IPosition), `MiniSwap`, `MockOracle`, `MockERC20`.
 - **Agent:** 8/8 strategist sizing + 11/11 LLM-safety harness (valid picks honored including non-cheapest; out-of-set picks and thrown rankers fall back; below-trigger never calls the model).
