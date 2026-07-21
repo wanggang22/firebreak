@@ -18,7 +18,7 @@
   .sans { font-family: "JetBrains Mono", ui-monospace, monospace; }
   .scene { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; overflow: hidden; padding: 120px 150px; }
   #s1 { z-index: 1; }
-  #s2, #s3, #s4, #s5, #s6, #s7, #s8, #s9, #s10 { opacity: 0; }
+  #s2, #s3, #s4, #s5, #s6, #s7, #s8, #s9, #s10, #s11, #s12 { opacity: 0; }
   .glow { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .16; pointer-events: none; }
   .kicker { font-size: 20px; letter-spacing: .32em; text-transform: uppercase; color: var(--faint); }
   .h1 { font-size: 108px; font-weight: 700; line-height: 1.02; letter-spacing: -.01em; }
@@ -72,7 +72,7 @@
 </style>
 </head>
 <body>
-  <div id="root" data-composition-id="main" data-width="1920" data-height="1080" data-start="0" data-duration="195">
+  <div id="root" data-composition-id="main" data-width="1920" data-height="1080" data-start="0" data-duration="224">
 
     <!-- S1 TITLE 0-11 -->
     <div id="s1" class="scene">
@@ -221,6 +221,52 @@
       </div>
     </div>
 
+    <!-- S11 CHEAPEST != BEST 161.5-177 -->
+    <div id="s11" class="scene">
+      <div class="glow" style="width:700px;height:700px;background:var(--teal);left:38%;top:-260px"></div>
+      <div style="height:100%;display:flex;flex-direction:column;justify-content:center;gap:24px">
+        <div id="s11-k" class="kicker">where the LLM earns its place</div>
+        <div id="s11-h" class="h2 sans" style="max-width:34ch">The cheapest path isn't always the right one.</div>
+        <div class="two" style="align-items:start">
+          <div id="s11-t" class="card">
+            <h3>the vetted paths</h3>
+            <table class="ctable" style="font-size:23px">
+              <tr><th>path</th><th>cost</th><th>result</th></tr>
+              <tr><td>TOP-UP</td><td>0.00</td><td class="ember">PARTIAL · 1.266</td></tr>
+              <tr class="win"><td>ROTATE ✓</td><td>0.36</td><td>full fix · 1.380</td></tr>
+              <tr><td>DELEVERAGE</td><td>17.69</td><td class="ember">shrinks position</td></tr>
+            </table>
+          </div>
+          <div id="s11-m" class="card">
+            <h3 style="color:var(--teal)">Claude's call</h3>
+            <p style="font-size:23px">The free TOP-UP only reaches 1.266 — still at risk. ROTATE fully restores health for 0.36 by swapping into higher-quality collateral, keeping your exposure intact.</p>
+          </div>
+        </div>
+        <div id="s11-p" class="lead" style="font-size:28px;max-width:64ch">The naive cheapest-by-cost rule gets this <span class="ember">wrong</span>. Claude sees each path's projected health and picks the durable one. <span style="color:var(--faint)">Executed on-chain: HF 1.190 → 1.602.</span></div>
+      </div>
+    </div>
+
+    <!-- S12 COUNTERFACTUAL 177-190 -->
+    <div id="s12" class="scene">
+      <div style="height:100%;display:flex;flex-direction:column;justify-content:center;gap:30px">
+        <div id="s12-k" class="kicker">protected vs unprotected · same market</div>
+        <div id="s12-h" class="h2 sans">Same drift. Opposite outcomes.</div>
+        <div class="two">
+          <div id="s12-a" class="card" style="border-color:rgba(45,212,191,.4)">
+            <h3 style="color:var(--teal)">with Firebreak</h3>
+            <div class="big" style="color:var(--teal)">83 / 100 mEURC kept</div>
+            <p style="margin-top:8px">Rescued early at the trigger. Stayed solvent through the whole drift — never liquidated.</p>
+          </div>
+          <div id="s12-b" class="card" style="border-color:rgba(249,115,22,.4)">
+            <h3 style="color:var(--ember)">without Firebreak</h3>
+            <div class="big" style="color:var(--ember)">100 / 100 seized</div>
+            <p style="margin-top:8px">Rode the drift to HF 0.77 and was liquidated. The entire position, gone.</p>
+          </div>
+        </div>
+        <div id="s12-p" class="lead" style="font-size:28px;max-width:60ch">Firebreak turns liquidation from the default outcome into the <span class="teal">avoidable</span> one.</div>
+      </div>
+    </div>
+
     <!-- S10 AGENT STACK 161.5-176.5 -->
     <div id="s10" class="scene">
       <div class="glow" style="width:760px;height:760px;background:var(--teal);right:-200px;top:-240px"></div>
@@ -351,28 +397,45 @@ tl.from("#s7-b",  { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 148.
 tl.from("#s7-c",  { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 148.8);
 tl.from("#s7-tx", { opacity: 0, duration: 0.9, ease: "power2.out" }, 151.0);
 
-/* S8 WHY ARC */
-xfade("#s7", "#s10", 161.5);
-tl.from("#s10-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 162.2);
-tl.from("#s10-h", { y: 46, opacity: 0, duration: 0.9, ease: "expo.out" }, 162.6);
-tl.from("#s10-a", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 165.4);
-tl.from("#s10-b", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 167.4);
-tl.from("#s10-p", { y: 30, opacity: 0, duration: 0.9, ease: "power2.out" }, 171.0);
+/* S11 CHEAPEST != BEST */
+xfade("#s7", "#s11", 161.5);
+tl.from("#s11-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 162.2);
+tl.from("#s11-h", { y: 46, opacity: 0, duration: 0.9, ease: "expo.out" }, 162.6);
+tl.from("#s11-t", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 165.4);
+tl.from("#s11-m", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 167.4);
+tl.from("#s11-p", { y: 30, opacity: 0, duration: 0.9, ease: "power2.out" }, 172.0);
 
-xfade("#s10", "#s8", 176.0);
-tl.from("#s8-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 176.7);
-tl.from("#s8-h", { y: 44, opacity: 0, duration: 0.8, ease: "expo.out" }, 177.1);
-tl.from("#s8-a", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 179.1);
-tl.from("#s8-b", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 179.9);
-tl.from("#s8-c", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 180.7);
+/* S12 COUNTERFACTUAL */
+xfade("#s11", "#s12", 177.0);
+tl.from("#s12-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 177.7);
+tl.from("#s12-h", { y: 44, opacity: 0, duration: 0.8, ease: "expo.out" }, 178.1);
+tl.from("#s12-a", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 180.4);
+tl.from("#s12-b", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 182.0);
+tl.from("#s12-p", { y: 30, opacity: 0, duration: 0.9, ease: "power2.out" }, 186.0);
+
+/* S10 AGENT STACK */
+xfade("#s12", "#s10", 190.0);
+tl.from("#s10-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 190.7);
+tl.from("#s10-h", { y: 46, opacity: 0, duration: 0.9, ease: "expo.out" }, 191.1);
+tl.from("#s10-a", { x: -40, opacity: 0, duration: 0.8, ease: "power3.out" }, 193.9);
+tl.from("#s10-b", { x: 40, opacity: 0, duration: 0.8, ease: "power3.out" }, 195.9);
+tl.from("#s10-p", { y: 30, opacity: 0, duration: 0.9, ease: "power2.out" }, 199.5);
+
+/* S8 WHY ARC */
+xfade("#s10", "#s8", 204.5);
+tl.from("#s8-k", { y: 30, opacity: 0, duration: 0.6, ease: "power3.out" }, 205.2);
+tl.from("#s8-h", { y: 44, opacity: 0, duration: 0.8, ease: "expo.out" }, 205.6);
+tl.from("#s8-a", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 207.6);
+tl.from("#s8-b", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 208.4);
+tl.from("#s8-c", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 209.2);
 
 /* S9 CLOSE */
-xfade("#s8", "#s9", 187.0);
-tl.from("#s9-h",     { y: 44, opacity: 0, duration: 0.9, ease: "expo.out" }, 187.7);
-tl.from("#s9-line",  { scaleX: 0, duration: 0.8, ease: "expo.out" }, 188.6);
-tl.from("#s9-tag",   { y: 32, opacity: 0, duration: 0.8, ease: "power3.out" }, 189.2);
-tl.from("#s9-mark",  { y: 40, opacity: 0, duration: 0.9, ease: "power3.out" }, 190.2);
-tl.from("#s9-links", { opacity: 0, duration: 0.8, ease: "power2.out" }, 191.2);
+xfade("#s8", "#s9", 215.5);
+tl.from("#s9-h",     { y: 44, opacity: 0, duration: 0.9, ease: "expo.out" }, 216.2);
+tl.from("#s9-line",  { scaleX: 0, duration: 0.8, ease: "expo.out" }, 217.1);
+tl.from("#s9-tag",   { y: 32, opacity: 0, duration: 0.8, ease: "power3.out" }, 217.7);
+tl.from("#s9-mark",  { y: 40, opacity: 0, duration: 0.9, ease: "power3.out" }, 218.7);
+tl.from("#s9-links", { opacity: 0, duration: 0.8, ease: "power2.out" }, 219.7);
 
 window.__timelines["main"] = tl;
 </script>

@@ -8,3 +8,4 @@ contracts/broadcast/
 dist/
 *.log
 .DS_Store
+cover/renders/
