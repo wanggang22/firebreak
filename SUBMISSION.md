@@ -1,79 +1,110 @@
 # Firebreak — The Liquidation Firewall for Stablecoin-Native Lending on Arc
 
-> **Checkpoint 2 progress submission** · Programmable Money Hackathon (Encode × Arc × Circle)
+> **Final submission (Checkpoint 3)** · Programmable Money Hackathon (Encode × Arc × Circle)
 
-**Project:** Firebreak — a non-custodial liquidation firewall. Borrowers sign an on-chain Mandate; an autonomous keeper agent watches loan health and, before liquidators can move, executes the cheapest bounded rescue in a single atomic transaction.
+**Project:** Firebreak — a non-custodial liquidation firewall. Borrowers sign a bounded on-chain **Mandate**; an autonomous keeper agent watches loan health and, before liquidators can move, executes the cheapest bounded rescue in a single atomic transaction.
 **Circle account email:** wangligang16161616@gmail.com
-**Tracks:** DeFi (primary) + Agentic Economy — the product is a DeFi primitive *and* an autonomous agent with money at stake.
-**Repo:** https://github.com/wanggang22/firebreak
-**Live demo:** https://firebreak-site-wanggang22s-projects.vercel.app — an interactive replay of the real Arc testnet rescue (drift → Claude ranks → TOP-UP → health restored), with clickable arcscan proof. Run the fully-live version locally with `npm run demo:server`.
+**Tracks:** DeFi (primary) + Agentic Economy — it is a DeFi primitive *and* an autonomous agent with money at stake.
+
+| | |
+|---|---|
+| **Repo** | https://github.com/wanggang22/firebreak |
+| **Live demo** | https://firebreak-site-wanggang22s-projects.vercel.app — interactive replay of the real Arc-testnet rescue, with clickable arcscan proof |
+| **Video (3 min)** | [`video/renders/firebreak-demo-3min.mp4`](video/renders/firebreak-demo-3min.mp4) |
+| **Deck** | [`deck/index.html`](deck/index.html) |
+| **Deployed on** | Arc testnet, chainId 5042002 |
 
 ---
 
 ## Problem
 
-Liquidation is the worst outcome in lending, and it's almost always avoidable. A borrower's health factor doesn't flash-crash — it **drifts**: FX moves, an RWA re-prices, interest accrues. By the time the position crosses the liquidation line, a liquidator bot has already been waiting, and it takes a 5–10% penalty out of the borrower's collateral. The borrower could have fixed it with a tiny top-up or a collateral swap hours earlier — but nobody was watching at 3am, and even if they were, a manual "approve this transaction" flow is too slow and gives a bot custody-shaped power.
+Liquidation is the worst outcome in lending, and on Arc it is usually the *avoidable* one.
 
-Arc makes this failure especially sharp: collateral here is FX (EURC) and tokenized RWAs (T-bills) whose prices *drift* slowly. Drift is exactly what automation catches and humans miss.
+On a stablecoin-native L1 your collateral is FX and tokenized RWAs — EURC, T-bills, private credit. These don't gap down 40% in a candle. They **drift**: the euro slides two cents over a week, an RWA re-prices, interest accrues. Health factor walks slowly toward the line while a liquidator bot waits, then takes a **5–10% penalty** out of the borrower's collateral — for something a **0.94 USDC top-up** would have fixed.
 
-## What we're building
+Drift is exactly the failure mode automation catches and humans miss. Nobody checks their health factor at 3am. But the usual fixes are both bad: watch it yourself (you won't), or hand a bot your keys (now something else controls your collateral). **Automation you can't bound isn't safety — it's a different risk.**
 
-Firebreak lets a borrower sign a **Mandate** — a bounded, conditional, non-custodial authorization stored on-chain:
+## What we built
 
-- **Trigger:** act only when health factor < X (e.g. 1.20)
-- **Spend cap:** never move more than Y USDC per rescue
-- **Action whitelist:** any subset of `{ DELEVERAGE, ROTATE, TOP-UP }`
+The borrower signs a **Mandate** — a bounded, conditional, non-custodial authorization stored on-chain:
 
-An autonomous keeper agent then monitors the loan and, when health crosses the trigger, executes the **cheapest rescue that fits the Mandate** — in one atomic transaction, settled sub-second in native USDC. The keeper can never exceed the cap, take an un-whitelisted action, or touch funds outside the rescue: the `FirebreakMandate` contract re-checks every bound on-chain, so authorization is real, not trust.
+- **Trigger** — act only when health factor < X (e.g. 1.20)
+- **Spend cap** — never move more than Y USDC per rescue
+- **Action whitelist** — any subset of `{ DELEVERAGE, ROTATE, TOP-UP }`
 
-**The agentic core — "LLM ranks, deterministic code sizes + bounds-checks":**
-The deterministic strategist sizes *every* allowed rescue path to restore health to a safe margin, prices each, and drops any that breach the spend cap — producing a vetted candidate set. **Claude (claude-opus-4-8) then ranks that set** and writes the borrower-facing reasoning memo, constrained by a strict-tool enum of viable action ids, so it can only ever pick a bounds-checked path. Any error, or an out-of-set pick, falls back to the cheapest path. The model's only freedom is *which safe rescue* — never *whether it's safe*. That's genuine autonomy (a judgment with real money at stake) with none of the "LLM does math wrong and drains the position" risk.
+A keeper agent watches the loan and, when health crosses the trigger, executes the **cheapest rescue that fits the Mandate** — one atomic transaction, settled sub-second in native USDC. `FirebreakMandate` re-checks every bound on-chain at execution, so the keeper is untrusted by construction: it never holds borrower funds and cannot exceed the cap, take an un-whitelisted action, or act on a healthy position.
 
-## Progress so far (CP2)
+### The agentic core: the LLM ranks, deterministic code sizes and bounds-checks
 
-**Contracts — done, live on Arc testnet, 50 forge tests green (incl. fuzz):**
-- `FirebreakMandate.sol` — the Mandate: register with terms + reserve, `rescue(user, plan)` gated on HF-trigger + spend-cap + action-whitelist, flash-rescue callback pattern, non-custodial.
-- `MiniLend.sol` — a lending pool exposing a clean `IPosition` adapter (native-USDC debt, WAD health factor), so the keeper is protocol-agnostic — MiniLend is just the first adapter.
-- `MiniSwap.sol` (constant-product AMM), `MockOracle.sol`, `MockERC20.sol` (mEURC / mTBILL) round out a full drift scenario.
+This is the design decision the project turns on.
 
-**Keeper agent — done (TypeScript + viem + Anthropic SDK):**
-- `monitor` reads the full health snapshot off-chain (HF, debt, per-token collateral, oracle prices, live swap quotes) — every input is a real on-chain read.
-- `strategist` = deterministic sizing core (8/8 sizing tests) + Claude ranker (11/11 harness tests proving the safety contract: valid picks honored, out-of-set picks and API failures fall back to cheapest).
-- `executor` sends the chosen plan on-chain and re-checks the spend cap off-chain before spending gas (the off-chain half of a double guard).
+The naive approach — hand the position to a model and execute its answer — is how you get a model confidently sizing a swap wrong with real collateral at stake. Financial sizing is arithmetic; "it usually gets it right" is not a safety property.
 
-**Live on Arc testnet (chainId 5042002) — a real LLM-driven rescue, verified in-window:**
-The full scenario is deployed and the keeper executed an end-to-end rescue with Claude in the loop:
-- Alice: 10 mEURC collateral, 5 USDC debt. EURC drifted 1.08 → 0.70, pushing HF to **1.120** (below the 1.20 trigger).
-- Claude ranked 3 viable paths (TOP-UP 0.94 USDC / ROTATE / DELEVERAGE) and chose **TOP-UP** — zero-cost, no swap, no slippage, full position intact — with a written memo.
-- Executor sent it on-chain: **HF 1.120 → 1.380**, spent **0.94 USDC**.
-- Tx: https://testnet.arcscan.app/tx/0x6041d281b4d37ae7e599787478e6edb008cc6606a9b7483dd37503105d4d9869
-- Independently verified: receipt `success`, and a separate `cast call` confirms Alice's on-chain HF is now `1.38`.
-- Evidence file: `agent/evidence/run-testnet-001.json`
+Instead:
 
-**Deployed contracts (Arc testnet):**
-- Mandate: https://testnet.arcscan.app/address/0x529D2257dc8BEEA14D02FBc6123a079C08596915
-- Pool (MiniLend): https://testnet.arcscan.app/address/0x8B526D995132dB3F55299A4e19045FE1aC3E49a3
-- AMM (MiniSwap): `0x3d19c2C9FfFC03A27bE00D32b280e9c219fD0DFe`
-- Oracle: `0x5E7d6D15Be0b53845c334BeBF4d72CCEc456a8C8`
-- mEURC: `0x27779e2E363Fd5d7CBF0e0C6B1641c0d9b68F7d6` · mTBILL: `0x82f1C6108760855CF83EBA178a751dBEF3a6DFA5`
+1. **The deterministic core** builds *every* allowed rescue path, sizes each to restore health to target (closed-form), prices it, and drops any that breach the spend cap → a set of **vetted, executable candidates**.
+2. **Claude ranks that set, and only that set.** The tool schema is a strict enum of the candidate action ids, so the model cannot name an action that wasn't vetted. It also writes the borrower-facing memo explaining the choice.
+3. **Any deviation falls back.** Out-of-set pick, API error, timeout → the cheapest vetted path executes anyway. A rescue is never stalled by the model being down.
 
-**Reproducible:** `npm run demo` runs the whole loop (Claude ranks → executor executes → HF restored) against a local anvil deploy; the same code drives testnet by pointing `RPC`/`CHAIN_ID` at Arc. Two local-anvil evidence files (`run-local-001` deterministic, `run-local-002` LLM-driven) accompany the testnet run.
+The model's only freedom is **which safe path** — never whether it's safe. 11/11 harness tests pin exactly this contract.
 
-**Dashboard — live console:** `npm run demo:server` boots anvil + the scenario + a thin SSE server; the single-screen page (`agent/app/index.html`) shows the health factor drift past the trigger and the keeper rescue it live (Claude's memo streamed in), with a permanent strip anchoring the real Arc-testnet rescue. A hosted, backendless replay of that testnet rescue is public at https://firebreak-site-wanggang22s-projects.vercel.app.
+## Evidence — everything below is on-chain and verifiable
 
-## Products used (Circle / Arc)
+### 1. A real LLM-driven rescue on Arc testnet
 
-Native USDC as the gas + settlement token (`pay{value}`, 18-decimal), Arc smart contracts + sub-second finality (the rescue lands before the liquidator), Arc testnet RPC + arcscan for verification, and Anthropic Claude as the ranking strategist.
+EURC drifted down; health factor hit **1.120**, under the 1.20 trigger. The core sized three viable paths; Claude ranked them and chose TOP-UP; the executor sent it.
 
-## Next (toward CP3 / final, 8/9)
+| path | cost | detail |
+|---|---|---|
+| **TOP-UP ✓** | 0.00 USDC | 0.94 USDC from reserve — no swap, no slippage, no collateral sold |
+| ROTATE | ~0.00 | 7.00 USDC mEURC (LT .80) → mTBILL (LT .90), two swap legs |
+| DELEVERAGE | 0.36 USDC | sell 2.24 USDC of mEURC — permanently smaller position |
 
-- **Dashboard + demo video** — a borrower-facing console: sign a Mandate, watch health drift, watch the keeper rescue in real time with Claude's memo.
-- **Circle Wallets (User-Controlled)** onboarding — sign a Mandate with email/PIN, no seed phrase (integration path already proven on ARC-TESTNET in a sibling project).
-- **More adapters** — the keeper speaks `IPosition`; wiring a second real lending protocol proves the protocol-agnostic claim.
-- **Keeper economics** — the keeper pays gas in the same USDC unit as the savings; surface the per-rescue P&L.
+**HF 1.120 → 1.380**, spent **0.94 USDC**.
+tx [`0x6041…9869`](https://testnet.arcscan.app/tx/0x6041d281b4d37ae7e599787478e6edb008cc6606a9b7483dd37503105d4d9869) · Mandate [`0x529D…6915`](https://testnet.arcscan.app/address/0x529D2257dc8BEEA14D02FBc6123a079C08596915) · [evidence](agent/evidence/run-testnet-001.json)
+Verified independently: receipt `success`, plus a separate `cast call` confirming on-chain HF is `1.38`.
+
+### 2. The keeper runs on a Circle Agent Wallet (Agent Stack)
+
+The same rescue, with **no raw private key in the loop**. The keeper is a **Circle Agent Wallet** — an ERC-4337 smart contract account provisioned by `circle wallet login` — and the Claude-ranked plan is executed through `circle wallet execute`.
+
+**HF 1.120 → 1.380**, debt 5.000 → 4.058 USDC, network fee 0.0100 USDC.
+tx [`0xf608…d78a`](https://testnet.arcscan.app/tx/0xf608f5902aa2fb8bb1b90411dd9c9ab7efc270309dded66a0ab2fc42bc6fd78a) · [evidence](agent/evidence/run-testnet-agentwallet.json) · [design + constraints](docs/CIRCLE-AGENT-STACK.md)
+
+The transaction's `to` is the ERC-4337 EntryPoint and `tx.origin` is Circle's bundler; the effective `msg.sender` at `FirebreakMandate` is the agent wallet itself, which is why the Mandate's keeper check passes. **The keeper is an agent operating a smart account under account abstraction** — the shape the Agentic Economy track is about.
+
+Two things we hit and handled honestly:
+
+- **Circle CLI v0.0.6 cannot encode struct arguments.** `rescue(address,(uint8,...))` failed estimation in every encoding tried, while simple-argument calls estimated fine, and `cast` confirmed the call itself was valid. So `FirebreakMandate` exposes `rescueFlat(...)`, delegating to the **identical internal path** — proven equivalent and still keeper-gated by two dedicated tests.
+- **Circle wallet spend policies are mainnet-only, and Arc is testnet-only for Agent Wallets.** These don't overlap, so this run demonstrates the keeper *running on* an Agent Wallet — **not** a Circle-enforced spend policy. On Arc the Mandate contract remains the enforcing layer. The Circle policy layer becomes a second, independent bound when both reach mainnet. We state this rather than imply a guardrail we haven't run.
+
+### 3. Tests and reproducibility
+
+- **Contracts:** 52 Foundry tests green, including fuzz — `FirebreakMandate`, `MiniLend` (IPosition), `MiniSwap`, `MockOracle`, `MockERC20`.
+- **Agent:** 8/8 strategist sizing + 11/11 LLM-safety harness (valid picks honored including non-cheapest; out-of-set picks and thrown rankers fall back; below-trigger never calls the model).
+- **Local console:** `npm run demo:server` boots anvil + the scenario + an SSE server; the single-screen dashboard streams each keeper stage live (drift → candidates → Claude's memo → tx → restored). End-to-end smoke test covers drift → rescue → reset.
+- Every rescue receipt and memo is committed under `agent/evidence/`.
+
+## Why this specifically wants Arc
+
+Three properties, each load-bearing — remove any one and the product stops working:
+
+1. **Collateral that drifts instead of gapping.** FX and tokenized RWAs are Arc's native collateral. Slow drift is what a watching agent catches and a human misses.
+2. **Sub-second settlement.** The rescue must land *before* the liquidator's transaction. Rescue and liquidation are in a race; finality latency is the margin.
+3. **USDC-denominated gas.** Keeper cost and borrower savings are in the same unit, so "is a 0.94 USDC rescue worth sending?" is a decision you can actually make.
+
+## Products used
+
+Native USDC (gas + settlement, 18-decimal), Arc smart contracts and sub-second finality, Arc testnet RPC + arcscan for verification, **Circle Agent Stack — Agent Wallets** (ERC-4337 smart account as the keeper, `@circle-fin/cli`), and Anthropic Claude (`claude-opus-4-8`) as the ranking strategist.
+
+## Roadmap
+
+- **Circle wallet spend policies** as a second enforced bound, once Arc + Agent Wallets meet on mainnet.
+- **Real protocol adapters** — the keeper speaks a small `IPosition` interface; MiniLend is the first adapter, and wiring a live Arc lending venue proves the protocol-agnostic claim.
+- **Keeper economics** — a capped per-rescue fee inside the Mandate, designed so it cannot incentivise unnecessary rescues.
+- **Agent identity** — authorize a verified agent identity (ERC-8004 / KYA) instead of a raw keeper address, so a borrower can revoke a *class* of keeper rather than one key.
+- **Multi-keeper coordination** — first-writer-wins on-chain today; commit-reveal if racing becomes real.
 
 ---
 
-### Repo
-
-https://github.com/wanggang22/firebreak — `contracts/` (Foundry) · `agent/` (keeper) · `agent/evidence/` (every real rescue, receipts + memos) · `docs/DESIGN.md` + `docs/PLAN.md`.
+**Repo layout:** `contracts/` (Foundry) · `agent/` (keeper: monitor / strategist / executor) · `agent/evidence/` (every real rescue) · `web/` (public replay) · `video/` · `deck/` · `docs/`
