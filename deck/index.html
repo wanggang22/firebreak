@@ -147,7 +147,11 @@
       <p style="color:var(--teal);margin-top:12px">→ never stalls, never unbounded</p>
     </div>
   </div>
-  <p style="margin-top:26px">The model's only freedom is <b>which safe path</b> — never whether it's safe. Financial sizing is arithmetic and stays in code. <span style="color:var(--faint)">11/11 harness tests pin exactly this contract.</span></p>
+  <p style="margin-top:22px">The model's only freedom is <b>which safe path</b> — never whether it's safe. Sizing is arithmetic and stays in code. <span style="color:var(--faint)">11/11 harness tests pin exactly this contract.</span></p>
+  <div class="card" style="margin-top:18px;border-color:rgba(45,212,191,.35)">
+    <h3 style="color:var(--teal)">where the LLM earns its place — executed on-chain</h3>
+    <p style="font-size:18px">Small reserve: the <b>cheapest</b> path (zero-cost TOP-UP) only <b class="ember">partially</b> fixes health (1.266, still at risk). Claude picks <b class="teal">ROTATE</b> — a full fix to 1.380 for 0.36 USDC — because it sees each path's projected HF. The naive cheapest-by-cost rule gets this <b>wrong</b>. HF 1.190 → 1.602, position rotated into higher-quality collateral.</p>
+  </div>
 </section>
 
 <!-- 6 PROOF -->

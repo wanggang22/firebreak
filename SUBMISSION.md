@@ -79,7 +79,15 @@ Two things we hit and handled honestly:
 - **Circle CLI v0.0.6 cannot encode struct arguments.** `rescue(address,(uint8,...))` failed estimation in every encoding tried, while simple-argument calls estimated fine, and `cast` confirmed the call itself was valid. So `FirebreakMandate` exposes `rescueFlat(...)`, delegating to the **identical internal path** — proven equivalent and still keeper-gated by two dedicated tests.
 - **Circle wallet spend policies are mainnet-only, and Arc is testnet-only for Agent Wallets.** These don't overlap, so this run demonstrates the keeper *running on* an Agent Wallet — **not** a Circle-enforced spend policy. On Arc the Mandate contract remains the enforcing layer. The Circle policy layer becomes a second, independent bound when both reach mainnet. We state this rather than imply a guardrail we haven't run.
 
-### 3. Tests and reproducibility
+### 3. Where the LLM earns its place — cheapest ≠ best
+
+The obvious objection to an "AI agent" is *"you added an LLM to an if-statement."* Here is the answer, executed on-chain. With a deliberately small reserve, the **cheapest path (a zero-cost TOP-UP) only *partially* restores health** — HF 1.266, still at risk — while **ROTATE fully reaches the 1.380 target for 0.36 USDC**. The deterministic cheapest-by-cost rule would pick the free partial fix and *leave the position in danger*. Claude, seeing each candidate's projected health factor, picks ROTATE and explains why:
+
+> *"ROTATE fully restores health to the 1.380 target for just 0.36 USDC by swapping into higher-quality collateral, keeping your market exposure intact. The TOP-UP only reaches 1.266 (still at risk), and DELEVERAGE costs 17.69 USDC and permanently shrinks your position — neither is warranted when a cheap durable fix exists."*
+
+Executed: **HF 1.190 → 1.602**, the position genuinely rotated into ~59.8 mTBILL (verified on-chain). This is a real judgment the naive rule gets *wrong* — the value the model adds, in one transaction. ([evidence](agent/evidence/run-local-flagship.json), `contracts/script/DemoFlagship.s.sol`; same audited contract as the testnet heroes.)
+
+### 4. Tests and reproducibility
 
 - **Contracts:** 55 Foundry tests green, including fuzz — `FirebreakMandate`, `MiniLend` (IPosition), `MiniSwap`, `MockOracle`, `MockERC20`.
 - **Agent:** 8/8 strategist sizing + 11/11 LLM-safety harness (valid picks honored including non-cheapest; out-of-set picks and thrown rankers fall back; below-trigger never calls the model).
