@@ -1,0 +1,38 @@
+{
+  "note": "LLM in the loop: Claude (claude-opus-4-8) ranked the vetted rescue paths and the executor sent its choice to a live EVM. The deterministic core sized every path and enforced the spend cap + action whitelist BEFORE ranking, so the model's only freedom was which safe path to take.",
+  "network": "anvil-flagship (chainId 31337)",
+  "user": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+  "scenario": "mEURC collateral, USDC debt; EURC drifts down until HF crosses the Mandate trigger",
+  "trigger": "1.200",
+  "target": "1.380",
+  "model": "claude-opus-4-8",
+  "ranking": {
+    "viablePaths": [
+      {
+        "action": "TOPUP",
+        "why": "TOP-UP 3.00 USDC from reserve (no swap, no slippage, no collateral sold) — PARTIAL: only reaches HF 1.266 (target 1.380, capped)",
+        "costUsdc": "0.00"
+      },
+      {
+        "action": "ROTATE",
+        "why": "ROTATE 47.50 USDC of mEURC(LT 0.700) → mTBILL(LT 0.900)",
+        "costUsdc": "0.36"
+      },
+      {
+        "action": "DELEVERAGE",
+        "why": "DELEVERAGE: sell 13.97 USDC of mEURC, repay debt",
+        "costUsdc": "17.69"
+      }
+    ],
+    "chosenAction": "ROTATE",
+    "memo": "HF 1.190 < trigger 1.200. Target 1.380. Debt 50.00 USDC. Candidates: TOP-UP, ROTATE, DELEVERAGE. LLM ranked 3 viable paths and chose ROTATE 47.50 USDC of mEURC(LT 0.700) → mTBILL(LT 0.900) (cost 0.36 USDC). Reason: ROTATE fully restores health to the 1.380 target for just 0.36 USDC by swapping into higher-quality collateral, keeping your market exposure intact. The TOPUP only reaches 1.266 (still at risk), and DELEVERAGE costs 17.69 USDC and permanently shrinks your position — neither is warranted when a cheap durable fix exists."
+  },
+  "result": {
+    "hfBefore": "1.190",
+    "hfAfter": "1.602",
+    "spent": "47.50 USDC",
+    "txHash": "0x12d2524b085d0380586c5888f6260194e94771bd6b3d52526eae1ef108fbb2e2",
+    "explorerUrl": "https://testnet.arcscan.app/tx/0x12d2524b085d0380586c5888f6260194e94771bd6b3d52526eae1ef108fbb2e2",
+    "hfVerifiedOnChainAfter": "1.602 (independent readContract)"
+  }
+}
