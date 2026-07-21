@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+  :root{ --bg:#09090b; --panel:#111113; --panel2:#161619; --line:#26262b;
+    --ink:#e4e4e7; --dim:#9b9ba4; --faint:#6f6f78;
+    --amber:#f59e0b; --ember:#f97316; --teal:#2dd4bf; }
+  *{margin:0;box-sizing:border-box;font-family:"JetBrains Mono",ui-monospace,monospace}
+  body{width:1280px;height:800px;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-variant-numeric:tabular-nums}
+  #root{position:absolute;inset:0;padding:80px 96px;display:flex;flex-direction:column;justify-content:center;background:var(--bg)}
+  .glow{position:absolute;border-radius:50%;filter:blur(110px);pointer-events:none}
+  .grid-bg{position:absolute;inset:0;opacity:.5;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:64px 64px;mask-image:radial-gradient(ellipse 70% 60% at 30% 45%,#000,transparent 80%)}
+  .mark{font-size:118px;font-weight:800;letter-spacing:-.02em;line-height:1}
+  .mark .sq{color:var(--amber)}
+  .fbline{height:4px;background:var(--amber);box-shadow:0 0 30px var(--amber);margin:34px 0 30px;transform-origin:left}
+  .tag{font-size:38px;color:var(--dim);max-width:26ch;line-height:1.35}
+  .tag b{color:var(--ink);font-weight:600}
+  .row{display:flex;gap:14px;margin-top:44px;flex-wrap:wrap}
+  .chip{font-size:20px;border:1px solid var(--line);border-radius:999px;padding:9px 20px;color:var(--dim)}
+  .chip.on{color:#1a1206;background:var(--amber);border-color:var(--amber);font-weight:600}
+  /* right-side mini health gauge motif */
+  .gauge{position:absolute;right:120px;top:50%;transform:translateY(-50%);width:70px;height:420px;
+    background:var(--panel2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .fill{position:absolute;left:0;right:0;bottom:0;height:100%;transform-origin:bottom;transform:scaleY(.76);
+    background:linear-gradient(180deg,var(--teal),#0f766e)}
+  .trig{position:absolute;left:0;right:0;bottom:40%;border-top:3px dashed var(--amber)}
+  .glab{position:absolute;right:210px;font-size:19px;white-space:nowrap}
+  .glab.a{color:var(--amber);top:430px}
+  .arcbadge{position:absolute;bottom:70px;left:96px;font-size:20px;color:var(--faint);letter-spacing:.04em}
+  .arcbadge b{color:var(--teal)}
+</style>
+</head>
+<body>
+  <div id="root" data-composition-id="cover" data-width="1280" data-height="800" data-start="0" data-duration="1">
+    <div class="grid-bg"></div>
+    <div class="glow" style="width:640px;height:640px;background:var(--amber);left:-160px;top:-180px;opacity:.20"></div>
+    <div class="glow" style="width:560px;height:560px;background:var(--teal);right:-140px;bottom:-200px;opacity:.14"></div>
+
+    <div class="mark"><span class="sq">■</span> FIREBREAK</div>
+    <div class="fbline" style="width:600px"></div>
+    <div class="tag">The <b>liquidation firewall</b> for stablecoin-native lending on Arc.</div>
+    <div class="row">
+      <span class="chip on">non-custodial</span>
+      <span class="chip">autonomous keeper</span>
+      <span class="chip">Claude-ranked</span>
+      <span class="chip">settled in USDC</span>
+    </div>
+
+    <div class="gauge">
+      <div class="fill"></div>
+      <div class="trig"></div>
+    </div>
+    <div class="glab a">— trigger</div>
+    <div class="arcbadge">Live on <b>Arc testnet</b> · DeFi + Agentic Economy</div>
+  </div>
+<script>
+window.__timelines = window.__timelines || {};
+var tl = gsap.timeline({ paused: true });
+tl.set("#root", {}); // static frame
+window.__timelines["cover"] = tl;
+</script>
+</body>
+</html>
