@@ -1,11 +1,19 @@
 {
   "network": "arc-testnet",
-  "oracle": "0x5E7d6D15Be0b53845c334BeBF4d72CCEc456a8C8",
-  "pool": "0x8B526D995132dB3F55299A4e19045FE1aC3E49a3",
-  "amm": "0x3d19c2C9FfFC03A27bE00D32b280e9c219fD0DFe",
-  "mandate": "0x529D2257dc8BEEA14D02FBc6123a079C08596915",
+  "oracle": "0x0aE3c253EBd0011eDBB88754D2BAA3fDe944745F",
+  "pool": "0x6E2075FD748415d687509f301773c47252E745fb",
+  "amm": "0xF4971ea099ba7e87Ca55F009F32Ee78B478a3Cc1",
+  "mandate": "0xf26397EA0491d958d8f1d12C90DcB371101F3a18",
   "tokens": [
-    { "token": "0x27779e2E363Fd5d7CBF0e0C6B1641c0d9b68F7d6", "symbol": "mEURC", "isStable": false },
-    { "token": "0x82f1C6108760855CF83EBA178a751dBEF3a6DFA5", "symbol": "mTBILL", "isStable": true }
+    {
+      "token": "0xc75b21aA9d59D422D5d105F5C02D6BC41cCF3f25",
+      "symbol": "mEURC",
+      "isStable": false
+    },
+    {
+      "token": "0xE3E8668d7bcC40B2234AF14F36E139cc2395FF22",
+      "symbol": "mTBILL",
+      "isStable": true
+    }
   ]
 }

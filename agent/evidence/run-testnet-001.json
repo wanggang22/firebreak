@@ -15,24 +15,24 @@
       },
       {
         "action": "ROTATE",
-        "why": "ROTATE 7.00 USDC of mEURC(LT 0.800) → mTBILL(LT 0.900)",
+        "why": "ROTATE 7.00 USDC of mEURC(LT 0.800) → mTBILL(LT 0.900) — PARTIAL: only reaches HF 1.260 (target 1.380, capped)",
         "costUsdc": "0.00"
       },
       {
         "action": "DELEVERAGE",
-        "why": "DELEVERAGE: sell 2.24 USDC of mEURC, repay debt",
+        "why": "DELEVERAGE: sell 2.24 USDC of mEURC, repay debt — PARTIAL: only reaches HF 0.820 (target 1.380)",
         "costUsdc": "0.36"
       }
     ],
     "chosenAction": "TOPUP",
-    "memo": "HF 1.120 < trigger 1.200. Target 1.380. Debt 5.00 USDC. Candidates: TOP-UP, ROTATE, DELEVERAGE. LLM ranked 3 viable paths and chose TOP-UP 0.94 USDC from reserve (no swap, no slippage, no collateral sold) (cost 0.00 USDC). Reason: TOP-UP restores health from your prepaid reserve with no swap, no slippage, and no collateral sold, at zero cost now — the cheapest durable fix versus rotating (two swap fees) or deleveraging (0.36 USDC and a permanently smaller position)."
+    "memo": "HF 1.120 < trigger 1.200. Target 1.380. Debt 5.00 USDC. Candidates: TOP-UP, ROTATE, DELEVERAGE. LLM ranked 3 viable paths and chose TOP-UP 0.94 USDC from reserve (no swap, no slippage, no collateral sold) (cost 0.00 USDC). Reason: The top-up fully restores your health factor to the 1.380 target using your prepaid reserve — no swap, no slippage, no collateral sold, and zero cost now. The other options only partially fix the position and leave it still below target."
   },
   "result": {
     "hfBefore": "1.120",
     "hfAfter": "1.380",
     "spent": "0.94 USDC",
-    "txHash": "0x6041d281b4d37ae7e599787478e6edb008cc6606a9b7483dd37503105d4d9869",
-    "explorerUrl": "https://testnet.arcscan.app/tx/0x6041d281b4d37ae7e599787478e6edb008cc6606a9b7483dd37503105d4d9869",
+    "txHash": "0x57be4221ed1258879fb57a4c8fd378b0a82462424b022408cb46060d3465ae74",
+    "explorerUrl": "https://testnet.arcscan.app/tx/0x57be4221ed1258879fb57a4c8fd378b0a82462424b022408cb46060d3465ae74",
     "hfVerifiedOnChainAfter": "1.380 (independent readContract)"
   }
 }

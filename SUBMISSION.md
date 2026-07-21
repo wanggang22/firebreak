@@ -29,7 +29,8 @@ Drift is exactly the failure mode automation catches and humans miss. Nobody che
 The borrower signs a **Mandate** — a bounded, conditional, non-custodial authorization stored on-chain:
 
 - **Trigger** — act only when health factor < X (e.g. 1.20)
-- **Spend cap** — never move more than Y USDC per rescue
+- **Spend cap** — never move more than Y USDC of collateral *value* per rescue (oracle-priced, not a keeper-chosen swap leg)
+- **Max slippage** — the swap must recover at least (1 − s) of that value, a floor the *borrower* signs
 - **Action whitelist** — any subset of `{ DELEVERAGE, ROTATE, TOP-UP }`
 
 A keeper agent watches the loan and, when health crosses the trigger, executes the **cheapest rescue that fits the Mandate** — one atomic transaction, settled sub-second in native USDC. `FirebreakMandate` re-checks every bound on-chain at execution, so the keeper is untrusted by construction: it never holds borrower funds and cannot exceed the cap, take an un-whitelisted action, or act on a healthy position.
@@ -61,7 +62,7 @@ EURC drifted down; health factor hit **1.120**, under the 1.20 trigger. The core
 | DELEVERAGE | 0.36 USDC | sell 2.24 USDC of mEURC — permanently smaller position |
 
 **HF 1.120 → 1.380**, spent **0.94 USDC**.
-tx [`0x6041…9869`](https://testnet.arcscan.app/tx/0x6041d281b4d37ae7e599787478e6edb008cc6606a9b7483dd37503105d4d9869) · Mandate [`0x529D…6915`](https://testnet.arcscan.app/address/0x529D2257dc8BEEA14D02FBc6123a079C08596915) · [evidence](agent/evidence/run-testnet-001.json)
+tx [`0x57be…ae74`](https://testnet.arcscan.app/tx/0x57be4221ed1258879fb57a4c8fd378b0a82462424b022408cb46060d3465ae74) · Mandate [`0xf263…3a18`](https://testnet.arcscan.app/address/0xf26397EA0491d958d8f1d12C90DcB371101F3a18) · [evidence](agent/evidence/run-testnet-001.json)
 Verified independently: receipt `success`, plus a separate `cast call` confirming on-chain HF is `1.38`.
 
 ### 2. The keeper runs on a Circle Agent Wallet (Agent Stack)
@@ -69,7 +70,7 @@ Verified independently: receipt `success`, plus a separate `cast call` confirmin
 The same rescue, with **no raw private key in the loop**. The keeper is a **Circle Agent Wallet** — an ERC-4337 smart contract account provisioned by `circle wallet login` — and the Claude-ranked plan is executed through `circle wallet execute`.
 
 **HF 1.120 → 1.380**, debt 5.000 → 4.058 USDC, network fee 0.0100 USDC.
-tx [`0xf608…d78a`](https://testnet.arcscan.app/tx/0xf608f5902aa2fb8bb1b90411dd9c9ab7efc270309dded66a0ab2fc42bc6fd78a) · [evidence](agent/evidence/run-testnet-agentwallet.json) · [design + constraints](docs/CIRCLE-AGENT-STACK.md)
+tx [`0xbdab…0e81`](https://testnet.arcscan.app/tx/0xbdabd54e0a3dcda9d3f8c2c7810700f5e472dcebd585649c879751be6b210e81) · [evidence](agent/evidence/run-testnet-agentwallet.json) · [design + constraints](docs/CIRCLE-AGENT-STACK.md)
 
 The transaction's `to` is the ERC-4337 EntryPoint and `tx.origin` is Circle's bundler; the effective `msg.sender` at `FirebreakMandate` is the agent wallet itself, which is why the Mandate's keeper check passes. **The keeper is an agent operating a smart account under account abstraction** — the shape the Agentic Economy track is about.
 
@@ -80,7 +81,7 @@ Two things we hit and handled honestly:
 
 ### 3. Tests and reproducibility
 
-- **Contracts:** 52 Foundry tests green, including fuzz — `FirebreakMandate`, `MiniLend` (IPosition), `MiniSwap`, `MockOracle`, `MockERC20`.
+- **Contracts:** 55 Foundry tests green, including fuzz — `FirebreakMandate`, `MiniLend` (IPosition), `MiniSwap`, `MockOracle`, `MockERC20`.
 - **Agent:** 8/8 strategist sizing + 11/11 LLM-safety harness (valid picks honored including non-cheapest; out-of-set picks and thrown rankers fall back; below-trigger never calls the model).
 - **Local console:** `npm run demo:server` boots anvil + the scenario + an SSE server; the single-screen dashboard streams each keeper stage live (drift → candidates → Claude's memo → tx → restored). End-to-end smoke test covers drift → rescue → reset.
 - Every rescue receipt and memo is committed under `agent/evidence/`.

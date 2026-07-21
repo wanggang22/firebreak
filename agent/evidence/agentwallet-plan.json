@@ -3,7 +3,7 @@
   "network": "arc-testnet (keeper = Circle Agent Wallet)",
   "user": "0x20E40d46631026891D89CA1d33a94073D561B23B",
   "keeperAgentWallet": "0xd07f09c46c970797d239317e6e1a31d1c10dc524",
-  "mandate": "0x47B16130aE4e8e2Aca9956191753a99AEA3062db",
+  "mandate": "0xB750679ac63bE497d4Ba7fD08C9d8587b34adb9f",
   "hfBefore": "1.120",
   "trigger": "1.200",
   "target": "1.380",
@@ -16,22 +16,21 @@
     },
     {
       "action": "ROTATE",
-      "why": "ROTATE 7.00 USDC of mEURC(LT 0.800) → mTBILL(LT 0.900)",
+      "why": "ROTATE 7.00 USDC of mEURC(LT 0.800) → mTBILL(LT 0.900) — PARTIAL: only reaches HF 1.260 (target 1.380, capped)",
       "costUsdc": "0.00"
     },
     {
       "action": "DELEVERAGE",
-      "why": "DELEVERAGE: sell 2.24 USDC of mEURC, repay debt",
+      "why": "DELEVERAGE: sell 2.24 USDC of mEURC, repay debt — PARTIAL: only reaches HF 0.820 (target 1.380)",
       "costUsdc": "0.36"
     }
   ],
   "chosenAction": "TOPUP",
   "plannedSpendUsdc": "0.94",
-  "memo": "HF 1.120 < trigger 1.200. Target 1.380. Debt 5.00 USDC. Candidates: TOP-UP, ROTATE, DELEVERAGE. LLM ranked 3 viable paths and chose TOP-UP 0.94 USDC from reserve (no swap, no slippage, no collateral sold) (cost 0.00 USDC). Reason: TOP-UP restores your health factor from your own prepaid reserve at zero cost now — no swap fees, no slippage, and no collateral sold — making it the cheapest durable fix while leaving your market exposure and position size fully intact.",
+  "memo": "HF 1.120 < trigger 1.200. Target 1.380. Debt 5.00 USDC. Candidates: TOP-UP, ROTATE, DELEVERAGE. LLM ranked 3 viable paths and chose TOP-UP 0.94 USDC from reserve (no swap, no slippage, no collateral sold) (cost 0.00 USDC). Reason: TOPUP fully restores health to the 1.380 target at zero cost with no swap, slippage, or collateral sold, while both other candidates only partially fix the position and leave it below target.",
   "call": {
-    "signature": "rescue(address,(uint8,address,uint256,address,uint256,uint256,uint256))",
-    "user": "0x20E40d46631026891D89CA1d33a94073D561B23B",
-    "plan": "(4,0x0000000000000000000000000000000000000000,0,0x0000000000000000000000000000000000000000,0,0,942028985507246377)",
-    "contract": "0x47B16130aE4e8e2Aca9956191753a99AEA3062db"
+    "signature": "rescueFlat(address,uint8,address,uint256,address,uint256,uint256,uint256)",
+    "args": "0x20E40d46631026891D89CA1d33a94073D561B23B 4 0x0000000000000000000000000000000000000000 0 0x0000000000000000000000000000000000000000 0 0 942028985507246377",
+    "contract": "0xB750679ac63bE497d4Ba7fD08C9d8587b34adb9f"
   }
 }

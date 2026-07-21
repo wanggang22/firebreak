@@ -1,17 +1,17 @@
 {
   "network": "arc-testnet (keeper = Circle Agent Wallet)",
-  "oracle": "0x70bF02237dd90257Dec5B963E74a8195abb17749",
-  "pool": "0xe525F19f891FE3E1dBBf8069F8f6DC8Fe3839764",
-  "amm": "0x475DDd6715450c3218f3FA698b96f745D7da6e03",
-  "mandate": "0x47B16130aE4e8e2Aca9956191753a99AEA3062db",
+  "oracle": "0xdBc9e06393b4Fc2f3E71Bc8f3C28f96219ce0D46",
+  "pool": "0x7126DB9eb7Ca91d6b5FE32ECcaC6a68540F898aB",
+  "amm": "0x772Ca0e1cc12fAcf2Ca72100B42E3eF61F5203a5",
+  "mandate": "0xB750679ac63bE497d4Ba7fD08C9d8587b34adb9f",
   "tokens": [
     {
-      "token": "0xe9062e57a9F6ca7C21fa7416364f6b97d1333CB4",
+      "token": "0x38fE103d71B0034A262cf23228856097ac41F94B",
       "symbol": "mEURC",
       "isStable": false
     },
     {
-      "token": "0xdC0ab782c5F9DFF5787eF6D3B936ef097E4A2682",
+      "token": "0x6c342D6C13F796566A3De4A91C684f3Fa1A82883",
       "symbol": "mTBILL",
       "isStable": true
     }
