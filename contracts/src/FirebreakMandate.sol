@@ -103,11 +103,25 @@ contract FirebreakMandate is IRescueCallback {
     }
 
     function topUpReserve() external payable {
-        State storage s = mandates[msg.sender];
+        _topUpReserve(msg.sender, msg.value);
+    }
+
+    /// @notice Fund someone else's rescue reserve. Permissionless on purpose:
+    ///         the keeper refills a borrower's reserve from their cross-chain
+    ///         Unified Balance, and the funds land under the borrower's own
+    ///         mandate. Only the borrower can withdraw them, and the keeper can
+    ///         only spend them through the same bounded `rescue` path — so a
+    ///         third party paying in can never gain control of anything.
+    function topUpReserveFor(address user) external payable {
+        _topUpReserve(user, msg.value);
+    }
+
+    function _topUpReserve(address user, uint256 amount) private {
+        State storage s = mandates[user];
         if (!s.active) revert NoMandate();
-        if (msg.value == 0) revert ZeroAmount();
-        s.reserve += msg.value;
-        emit ReserveToppedUp(msg.sender, msg.value);
+        if (amount == 0) revert ZeroAmount();
+        s.reserve += amount;
+        emit ReserveToppedUp(user, amount);
     }
 
     function withdrawReserve(uint256 amount) external nonReentrant {

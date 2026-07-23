@@ -123,6 +123,44 @@ contract FirebreakMandateTest is Test {
         fb.withdrawReserve(1e18);
     }
 
+    /// The keeper refills a borrower's reserve out of their cross-chain
+    /// Unified Balance, so a third party must be able to pay in.
+    function test_TopUpReserveFor_ByKeeper() public {
+        _register(TOPUP, 300e18, 100e18);
+        vm.deal(keeper, 50e18);
+        vm.prank(keeper);
+        fb.topUpReserveFor{value: 40e18}(alice);
+        (,, uint256 reserve) = fb.mandateOf(alice);
+        assertEq(reserve, 140e18);
+    }
+
+    /// Paying in must grant the payer nothing: the funds sit under the
+    /// borrower's mandate, withdrawable only by the borrower.
+    function test_TopUpReserveFor_GivesPayerNoControl() public {
+        _register(TOPUP, 300e18, 100e18);
+        vm.deal(rando, 50e18);
+        vm.prank(rando);
+        fb.topUpReserveFor{value: 50e18}(alice);
+
+        // rando funded it but has no mandate of their own and cannot pull it back
+        vm.prank(rando);
+        vm.expectRevert(FirebreakMandate.NoMandate.selector);
+        fb.withdrawReserve(50e18);
+
+        // alice owns every unit of it
+        uint256 before = alice.balance;
+        vm.prank(alice);
+        fb.withdrawReserve(150e18);
+        assertEq(alice.balance, before + 150e18);
+    }
+
+    function test_RevertWhen_TopUpReserveForUnregistered() public {
+        vm.deal(keeper, 10e18);
+        vm.prank(keeper);
+        vm.expectRevert(FirebreakMandate.NoMandate.selector);
+        fb.topUpReserveFor{value: 1e18}(rando); // rando never registered
+    }
+
     /* ── rescue gates ───────────────────────────────────── */
 
     function test_RevertWhen_RescueByNonKeeper() public {

@@ -115,7 +115,26 @@ Three properties, each load-bearing — remove any one and the product stops wor
 
 Native USDC (gas + settlement, 18-decimal), Arc smart contracts and sub-second finality, Arc testnet RPC + arcscan for verification, **Circle Agent Stack — Agent Wallets** (ERC-4337 smart account as the keeper, `@circle-fin/cli`), and Anthropic Claude (`claude-opus-4-8`) as the ranking strategist.
 
-**On App Kits — deliberately not used.** Send, Bridge, Swap and Unified Balance solve cross-chain payment and liquidity movement. Firebreak's money movement is a *collateral swap inside a single lending position on one chain*, executed atomically by the Mandate contract so every bound is re-checked in the same transaction. Routing that leg through an external SDK would add a dependency and break atomicity without changing what the product does. Agent Stack was the relevant Circle surface here, and we used it for real. We'd rather say this plainly than bolt on a product for the checklist.
+### App Kits — Unified Balance, as the borrower's cross-chain reserve
+
+The rescue itself is a collateral swap inside one position on one chain, and it stays atomic. But the **reserve** that funds the cheapest rescue path has no reason to live on Arc.
+
+TOP-UP repays debt from a reserve the borrower prepays into the Mandate. That forces a borrower to park idle USDC on Arc for months against a liquidation that may never come — and when the reserve runs thin, the cheapest path silently stops being available. This is not hypothetical: on our live testnet Mandate the reserve is **0.06 USDC**, which is exactly why the flagship run's TOP-UP could only reach HF 1.266 instead of the 1.380 target.
+
+So the reserve lives in the borrower's **Circle Unified Balance** (`@circle-fin/unified-balance-kit`), spread across any chain they already hold USDC on, and the keeper refills the Arc-side reserve when it drops below a floor. Crossing chains cannot be atomic, so this is deliberately a **second keeper loop** — it keeps the magazine loaded *before* the shot is needed, and never runs inside a rescue.
+
+The authorization shape is the one Firebreak already uses:
+
+| layer | borrower grants | keeper may |
+|---|---|---|
+| Arc | `register(Terms)` | move collateral, within trigger/cap/whitelist |
+| Circle | `addDelegate(USDC, keeper)` | spend unified balance, within the delegate bound |
+
+The borrower owns both sides and either revocation alone stops the keeper. `topUpReserveFor(address)` is permissionless by design — funds land under the *borrower's* mandate, withdrawable only by them, spendable by the keeper only through the same bounded `rescue` path, so paying in grants the payer nothing (pinned by `test_TopUpReserveFor_GivesPayerNoControl`).
+
+Verified live against Circle Gateway, not mocked: Arc Testnet is confirmed supported at chainId 5042002, with 12 testnets usable as reserve sources. Run `npm run reserve -- <borrower>` for the ammunition report.
+
+**Send / Bridge / Swap are not used.** They solve cross-chain payment and liquidity movement; Firebreak's remaining money movement is the atomic on-chain swap leg, and routing that through an external SDK would break atomicity without changing what the product does. We'd rather name the one App Kit that genuinely fits than bolt on three for the checklist.
 
 ## Roadmap
 
