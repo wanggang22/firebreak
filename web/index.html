@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Firebreak — liquidation firewall on Arc</title>
-<meta name="description" content="A non-custodial liquidation firewall on Arc. Watch an autonomous keeper — Claude ranks the vetted rescue paths — save a loan before liquidators can move. Replay of a real Arc testnet rescue." />
+<meta name="description" content="A non-custodial liquidation firewall on Arc. Watch an autonomous keeper — Claude ranks the vetted rescue paths — save a loan before liquidators can move. Replay of a real Arc testnet rescue, plus a cross-chain reserve, a second lending protocol, and keeper economics." />
 <style>
   :root {
     --bg: #09090b; --panel: #111113; --panel-2: #161619; --line: #26262b;
@@ -56,6 +56,35 @@
   .line.target span { color: var(--teal); }
   .readout { display: flex; flex-direction: column; justify-content: flex-end; }
   .hf-num { font-size: 46px; font-weight: 600; line-height: 1; }
+
+  /* built-but-not-deployed section — visually separated from the chain replay
+     above so a reader is never left guessing which claims have on-chain proof */
+  .beyond { margin-top: 40px; padding-top: 26px; border-top: 1px solid var(--line); }
+  .beyond h3 { font-size: 15px; font-weight: 600; letter-spacing: .04em; margin-bottom: 8px; }
+  .beyond-intro { color: var(--dim); font-size: 13px; max-width: 78ch; margin-bottom: 20px; }
+  .beyond-intro b { color: var(--ink); font-weight: 600; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+  .cards .panel h2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .tag { font-size: 10px; letter-spacing: .06em; text-transform: none; border: 1px solid var(--line);
+    border-radius: 999px; padding: 2px 8px; color: var(--dim); }
+  .tag-live { border-color: rgba(45,212,191,.45); color: var(--teal); }
+  .cd { font-size: 13px; color: var(--dim); line-height: 1.55; margin: 10px 0; }
+  .cd b { color: var(--ink); font-weight: 600; }
+  .cd b.ok { color: var(--teal); }
+  .cd b.warn, .row .warn { color: var(--amber-2); }
+  .row .ok { color: var(--teal); }
+  code { font-size: 12px; color: var(--dim); background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; }
+  .mini { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 12.5px; }
+  .mini th, .mini td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); }
+  .mini th { color: var(--faint); font-weight: 500; font-size: 10.5px;
+    letter-spacing: .08em; text-transform: uppercase; }
+  .mini tr.hi td { color: var(--teal); }
+  .note { font-size: 12px; color: var(--faint); line-height: 1.5; margin-top: 12px;
+    padding-top: 10px; border-top: 1px dashed var(--line); }
+  .tally { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 18px;
+    font-size: 12.5px; color: var(--faint); }
+  .tally b { color: var(--ink); font-weight: 600; }
   .pill { display: inline-block; margin-top: 10px; font-size: 12px; padding: 4px 10px; border-radius: 999px;
     border: 1px solid var(--line); color: var(--dim); width: fit-content; }
   .pill.healthy, .pill.rescued { color: var(--teal); border-color: rgba(45,212,191,.4); }
@@ -108,6 +137,104 @@
         <div class="panel" id="proof"><h2>On-chain proof</h2></div>
       </div>
     </div>
+
+    <section class="beyond">
+      <h3>Beyond the rescue above</h3>
+      <p class="beyond-intro">
+        Everything up to here is a replay of a transaction that really executed on Arc. The three
+        capabilities below are <b>built and tested but not deployed to testnet</b> — the deployed
+        Mandate predates them. They are labelled that way rather than shown as chain proof.
+      </p>
+
+      <div class="cards">
+        <div class="panel">
+          <h2>Cross-chain reserve <span class="tag tag-live">Gateway verified</span></h2>
+          <p class="cd">
+            TOP-UP repays from a prepaid reserve — and the rescue you just replayed spent
+            <b>0.94</b> of the <b>1.00</b> that was in it. Look at what the mandate holds now:
+          </p>
+          <div class="row"><span class="k">reserve before that rescue</span><span>1.00 USDC</span></div>
+          <div class="row"><span class="k">spent by the TOP-UP</span><span>0.94 USDC</span></div>
+          <div class="row"><span class="k">reserve today, on Arc</span><span class="warn">0.06 USDC</span></div>
+          <p class="cd">
+            <b>One rescue nearly emptied the magazine.</b> The next drift finds the cheapest path
+            unavailable, and the position takes a worse one. Parking enough idle USDC on Arc to
+            survive months of this — against a liquidation that may never come — is a bad trade.
+          </p>
+          <p class="cd">
+            So the reserve lives in the borrower's <b>Circle Unified Balance</b>, across any chain they
+            already hold USDC on, and the keeper refills Arc when it drops below a floor — in a second
+            loop, never inside a rescue, so rescues stay atomic.
+          </p>
+          <table class="mini">
+            <tr><th>layer</th><th>borrower signs</th><th>keeper may</th></tr>
+            <tr><td>Arc</td><td>register(Terms)</td><td>move collateral</td></tr>
+            <tr class="hi"><td>Circle</td><td>addDelegate(USDC)</td><td>pull reserve</td></tr>
+          </table>
+          <p class="cd">Non-custodial on both layers — revoking either one alone stops the keeper.</p>
+          <p class="note">Checked live against Circle Gateway: Arc Testnet supported at chainId 5042002,
+            12 testnets usable as sources. The funded deposit → spend has not been run.</p>
+        </div>
+
+        <div class="panel">
+          <h2>A second protocol <span class="tag">8 tests</span></h2>
+          <p class="cd">
+            Every integration claims to be protocol-agnostic. With one adapter — written by us, shaped
+            like our own interface — that claim is self-certified. So we wrote a second pool designed
+            to break it.
+          </p>
+          <table class="mini">
+            <tr><th>pool</th><th>how it keeps score</th></tr>
+            <tr><td>MiniLend</td><td>raw amounts</td></tr>
+            <tr><td>ScaledLend</td><td>shares + accruing index</td></tr>
+          </table>
+          <p class="cd">
+            Share-based collateral and index-accrued debt is how Aave and Compound actually work, and
+            it is what breaks naive integrations — a keeper assuming <code>collateralOf</code> returns a
+            stored number sizes the rescue wrong. <b class="ok">The same Mandate bytecode guards both.</b>
+          </p>
+          <p class="cd">
+            It also exposes a risk the first pool cannot express. The index rises every second, so
+            health decays with the market perfectly still:
+          </p>
+          <div class="row"><span class="k">price before / after</span><span>1.08 → 1.08</span></div>
+          <div class="row"><span class="k">health factor</span><span class="warn">falls anyway</span></div>
+          <p class="note">Price drift is a risk that may never arrive. Interest drift is arithmetic,
+            and it never stops. <code>test_HealthDecaysWithAStillMarket</code></p>
+        </div>
+
+        <div class="panel">
+          <h2>Keeper economics <span class="tag">5 tests</span></h2>
+          <p class="cd">
+            An autonomous keeper costs money to run, but a careless fee turns it against the borrower
+            it guards. The shape matters more than the number.
+          </p>
+          <div class="row"><span class="k">fee</span><span>flat, fixed at signing</span></div>
+          <div class="row"><span class="k">paid</span><span>only after a rescue succeeds</span></div>
+          <div class="row"><span class="k">reserve too low</span><span class="ok">rescue still happens</span></div>
+          <p class="cd">
+            A percentage would pay more for bigger rescues and quietly reward the most expensive viable
+            path. Flat leaves the keeper indifferent to size, so choosing the cheapest path that works
+            costs it nothing.
+          </p>
+          <p class="cd">
+            It cannot farm frequency either: a rescue is reachable only below the trigger and must lift
+            health past it — pushing the position out of the band it would have to re-enter to bill
+            again. <b class="ok">Keeper revenue tracks how often the market threatens the position, not
+            anything the keeper decides.</b>
+          </p>
+          <p class="note">An underfunded reserve costs the keeper its fee, never the borrower the rescue.</p>
+        </div>
+      </div>
+
+      <div class="tally">
+        <span><b>103</b> tests</span>
+        <span><b>71</b> contract</span>
+        <span><b>11</b> reserve policy</span>
+        <span><b>10</b> strategist</span>
+        <span><b>11</b> LLM safety</span>
+      </div>
+    </section>
 
     <footer>
       Replay of tx <a id="tx-link" target="_blank" rel="noopener"></a> on Arc testnet (chainId 5042002).
