@@ -120,9 +120,9 @@
                     │  HF &lt; trigger? plan in bounds?│   non-custodial
                     └───────┬───────────────┬──────┘
                             ▼               ▼
-                      MiniLend.sol     MiniSwap.sol
-                      (IPosition)     (USDC ↔ ERC-20)</div>
-  <p style="margin-top:22px">The keeper speaks a small <b>IPosition</b> interface — MiniLend is just the first adapter, so the same agent can drive any Arc lending venue.</p>
+           MiniLend.sol / ScaledLend.sol   MiniSwap.sol
+            (two IPosition adapters)      (USDC ↔ ERC-20)</div>
+  <p style="margin-top:22px">The keeper speaks a small <b>IPosition</b> interface. <b>Two</b> adapters back it — MiniLend keeps raw amounts, ScaledLend keeps share-based collateral and index-accrued debt — and the same Mandate bytecode guards both, so "protocol-agnostic" is a tested property rather than a claim.</p>
 </section>
 
 <!-- 5 THE AGENTIC CORE -->
@@ -290,9 +290,9 @@
   <p style="margin-top:22px;color:var(--faint)">The honest line: incumbents do store trigger params on-chain. What's new is that the *entire authority* — amount, action, slippage — is a bounded object the borrower signs, enforced by the contract, not a scope you trust an off-chain bot to respect.</p>
 </section>
 
-<!-- 10 ROADMAP -->
+<!-- 11 ROADMAP -->
 <section class="slide">
-  <div class="n">10</div>
+  <div class="n">11</div>
   <div class="kick">what's next</div>
   <h2>From hackathon to production.</h2>
   <ul>
@@ -304,10 +304,10 @@
   </ul>
 </section>
 
-<!-- 11 CLOSE -->
+<!-- 12 CLOSE -->
 <section class="slide">
   <div class="glow" style="width:800px;height:800px;background:var(--amber);right:-220px;top:-260px"></div>
-  <div class="n">11</div>
+  <div class="n">12</div>
   <h2 style="font-size:52px">Liquidation is a fire.<br/>By the time you smell smoke, it's too late.</h2>
   <div class="rule" style="width:420px"></div>
   <p class="lead" style="margin-bottom:30px">Firebreak is the line the fire can't cross.</p>

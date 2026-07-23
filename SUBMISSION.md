@@ -11,7 +11,7 @@
 | **Repo** | https://github.com/wanggang22/firebreak |
 | **Live demo** | https://firebreak-site-wanggang22s-projects.vercel.app — interactive replay of the real Arc-testnet rescue, with clickable arcscan proof |
 | **Video (3 min)** | [`video/renders/firebreak-demo-3min.mp4`](video/renders/firebreak-demo-3min.mp4) |
-| **Deck** | [`deck/index.html`](deck/index.html) |
+| **Deck** | https://firebreak-deck.vercel.app — 12 slides, opens in the browser ([source](deck/index.html)) |
 | **Deployed on** | Arc testnet, chainId 5042002 |
 
 ---
