@@ -52,10 +52,11 @@ The bottom strip links the same rescue already executed on Arc testnet.
 
 ## Repo layout
 
-- `contracts/` — Foundry project (MockOracle, MiniLend, MiniSwap, FirebreakMandate)
-- `agent/` — keeper: monitor / strategist / executor
-- `evidence/` — every real on-chain rescue, receipts + memos
-- `docs/` — [DESIGN.md](docs/DESIGN.md) · [PLAN.md](docs/PLAN.md)
+- `contracts/` — Foundry project (FirebreakMandate · MiniLend + ScaledLend as two `IPosition` adapters · MiniSwap · MockOracle · MockERC20)
+- `agent/` — keeper: monitor / strategist / executor, plus the cross-chain reserve loop (`reserve.ts` policy, `unified-balance.ts` Circle SDK shim, `reserve-status.ts` report)
+- `agent/evidence/` — every real on-chain rescue, receipts + memos
+- `web/` · `deck/` · `video/` — hosted replay, pitch deck, 3-minute demo
+- `docs/` — [DESIGN.md](docs/DESIGN.md) · [PLAN.md](docs/PLAN.md) · [CIRCLE-AGENT-STACK.md](docs/CIRCLE-AGENT-STACK.md)
 
 ## Status
 
@@ -69,3 +70,9 @@ The bottom strip links the same rescue already executed on Arc testnet.
 - [x] Dashboard — single-screen live console (local anvil rescue + Arc-testnet proof strip); `npm run demo:server`
 - [x] **Circle Agent Stack** — the keeper runs on a **Circle Agent Wallet** (ERC-4337 smart account) on Arc testnet: Claude ranked the vetted paths and the agent wallet executed the rescue via `circle wallet execute`, no raw private key in the loop. HF 1.120 → 1.380, tx [`0xbdab…0e81`](https://testnet.arcscan.app/tx/0xbdabd54e0a3dcda9d3f8c2c7810700f5e472dcebd585649c879751be6b210e81) ([evidence](agent/evidence/run-testnet-agentwallet.json) · [design + constraints](docs/CIRCLE-AGENT-STACK.md))
 - [x] Demo video — **3-minute pitch + demo** (180s, incl. the Circle Agent Wallet rescue) for final submission ([`firebreak-demo-3min.mp4`](video/renders/firebreak-demo-3min.mp4)); 66s short cut also available ([`firebreak-demo.mp4`](video/renders/firebreak-demo.mp4))
+- [x] **Cheapest ≠ best** — a scenario where the free TOP-UP only *partially* restores health (1.266, still at risk) while ROTATE fully reaches 1.380 for 0.36 USDC. The deterministic cheapest-by-cost rule gets this wrong; Claude, seeing each path's projected HF, picks the durable fix. Executed HF 1.190 → 1.602 ([evidence](agent/evidence/run-local-flagship.json))
+- [x] **The counterfactual** — twin positions drift; the protected one keeps **83/100 mEURC and is never liquidated**, the unprotected twin has all 100 seized ([evidence](agent/evidence/run-local-twin.json))
+- [x] **Cross-chain reserve** (Circle App Kits / Unified Balance) — the rescue reserve lives on any chain the borrower already holds USDC on; the keeper refills Arc in a second loop when it drops below a floor, never inside a rescue, so rescues stay atomic. Authorization mirrors the Mandate: `register(Terms)` on Arc, `addDelegate(USDC, keeper)` on Circle, and revoking either alone stops the keeper. Verified live against Circle Gateway (Arc Testnet at chainId 5042002, 12 testnets usable as sources). `npm run reserve -- <borrower>`
+- [x] **Protocol-agnostic, falsified** — `ScaledLend`, a second pool with share-based collateral and index-accrued debt (Aave/Compound style), guarded by the **same Mandate bytecode**. It also expresses a risk MiniLend cannot: interest accrues every second, so health decays with the market perfectly still
+- [x] **Keeper economics** — a flat fee fixed at signing, paid only after a successful rescue. Flat rather than a percentage, so the keeper is indifferent to rescue size; and it cannot farm frequency, because a rescue must lift health out of the band it would need to re-enter to bill again. An underfunded reserve costs the keeper its fee, never the borrower the rescue
+- [x] **Audited our own late-build code** — found and fixed an unguarded `setExchangeRate` (anyone could inflate their own collateral), an amount rendered through `Number()` on the transfer path (lost precision, emitted `1e-9`), and a policy that could produce a negative refill. All pinned by tests that mount the attack. **120 tests total** (75 Foundry incl. fuzz · 11 LLM-safety · 16 reserve policy · 8 amount rendering · 10 strategist)
