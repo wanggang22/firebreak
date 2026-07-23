@@ -84,7 +84,7 @@ export async function readTerms(dep: Deployment, user: Address): Promise<Terms> 
   }))) as readonly [
     {
       pool: Address; swapVenue: Address; keeper: Address; hfTrigger: bigint;
-      maxSpendPerRescue: bigint; maxSlippageWad: bigint; minImprovementWad: bigint; allowedActions: number;
+      maxSpendPerRescue: bigint; maxSlippageWad: bigint; minImprovementWad: bigint; keeperFee: bigint; allowedActions: number;
     },
     boolean,
     bigint,
@@ -95,6 +95,7 @@ export async function readTerms(dep: Deployment, user: Address): Promise<Terms> 
     maxSpendPerRescue: terms.maxSpendPerRescue,
     maxSlippageWad: terms.maxSlippageWad,
     minImprovementWad: terms.minImprovementWad,
+    keeperFee: terms.keeperFee,
     allowedActions: terms.allowedActions,
     reserve,
   };

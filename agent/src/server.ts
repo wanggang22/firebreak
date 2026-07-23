@@ -137,6 +137,7 @@ async function signMandate(body: {
     maxSpendPerRescue: BigInt(body.spendCapWad ?? "5000000000000000000000"),
     maxSlippageWad: 20000000000000000n, // 0.02
     minImprovementWad: 20000000000000000n, // 0.02
+    keeperFee: 0n,
     allowedActions: Number(body.allowedActions ?? (ACTION.DELEVERAGE | ACTION.ROTATE | ACTION.TOPUP)),
   };
   const hash = await alice.writeContract({

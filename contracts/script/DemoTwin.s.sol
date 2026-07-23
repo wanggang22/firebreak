@@ -68,6 +68,7 @@ contract DemoTwin is Script {
                 pool: address(pool), swapVenue: address(amm), keeper: deployer,
                 hfTrigger: 1.2e18, maxSpendPerRescue: 5000e18,
                 maxSlippageWad: 0.02e18, minImprovementWad: 0.02e18,
+                keeperFee: 0,
                 allowedActions: 1 // DELEVERAGE
             })
         );

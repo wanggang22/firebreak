@@ -40,6 +40,7 @@ contract FirebreakMandate is IRescueCallback {
     event MandateRevoked(address indexed user, uint256 reserveReturned);
     event ReserveToppedUp(address indexed user, uint256 amount);
     event ReserveWithdrawn(address indexed user, uint256 amount);
+    event KeeperPaid(address indexed user, address indexed keeper, uint256 fee);
     event RescueExecuted(address indexed user, uint8 action, uint256 spent, uint256 hfBefore, uint256 hfAfter);
 
     uint8 public constant ACTION_DELEVERAGE = 1;
@@ -55,6 +56,7 @@ contract FirebreakMandate is IRescueCallback {
         uint256 maxSpendPerRescue; // max collateral VALUE (oracle) moved per rescue
         uint256 maxSlippageWad; // WAD; the swap must return >= (1 - this) of the collateral's oracle value
         uint256 minImprovementWad; // WAD; a rescue must raise HF by at least this much
+        uint256 keeperFee; // native USDC paid from reserve on a SUCCESSFUL rescue
         uint8 allowedActions; // bitmask of ACTION_*
     }
 
@@ -205,6 +207,33 @@ contract FirebreakMandate is IRescueCallback {
         if (hfAfter < hfBefore + t.minImprovementWad) revert NoImprovement();
 
         emit RescueExecuted(user, plan.action, spent, hfBefore, hfAfter);
+
+        // Paid last, and only here: every bound above has already passed, so a
+        // keeper is paid exactly when it did the job the borrower asked for.
+        //
+        // The fee is a flat amount the borrower signed, not a share of what was
+        // moved — a percentage would pay the keeper more for larger rescues and
+        // quietly reward taking the most expensive viable path. Flat means the
+        // keeper is indifferent to size, so the cheapest-that-works path costs
+        // it nothing to choose.
+        //
+        // Nor can it farm frequency. A rescue is only reachable below the
+        // borrower's trigger, and it must lift health by minImprovement — which
+        // pushes the position back out of the band it would need to re-enter to
+        // be billed again. Keeper revenue is therefore a function of how often
+        // the market actually threatens the position, not of anything the
+        // keeper decides.
+        if (t.keeperFee > 0) {
+            // Solvency never blocks the rescue: the position is already repaired
+            // and the improvement check has passed. An underfunded reserve costs
+            // the keeper its fee, it does not cost the borrower the rescue.
+            uint256 pay = t.keeperFee > s.reserve ? s.reserve : t.keeperFee;
+            if (pay > 0) {
+                s.reserve -= pay;
+                _sendNative(t.keeper, pay);
+                emit KeeperPaid(user, t.keeper, pay);
+            }
+        }
     }
 
     /// @notice Flash-rescue callback, invoked by the pool mid-bracket. Only the

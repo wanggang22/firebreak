@@ -27,6 +27,7 @@ export interface Terms {
   maxSpendPerRescue: bigint; // max collateral VALUE (oracle) moved per rescue
   maxSlippageWad: bigint; // swap must recover >= (1 - this) of collateral value
   minImprovementWad: bigint; // rescue must lift HF by at least this
+  keeperFee: bigint; // flat fee paid to the keeper from reserve on success
   allowedActions: number; // bitmask
   reserve: bigint; // prepaid native USDC
 }

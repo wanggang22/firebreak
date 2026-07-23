@@ -75,6 +75,7 @@ contract ScaledLendTest is Test {
                 maxSpendPerRescue: maxSpend,
                 maxSlippageWad: 0.02e18,
                 minImprovementWad: 0.02e18,
+                keeperFee: 0,
                 allowedActions: actions
             })
         );

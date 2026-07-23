@@ -85,6 +85,7 @@ contract FirebreakMandateTest is Test {
                 maxSpendPerRescue: maxSpend,
                 maxSlippageWad: maxSlippageWad,
                 minImprovementWad: minImprovementWad,
+                keeperFee: 0,
                 allowedActions: actions
             })
         );
@@ -161,6 +162,87 @@ contract FirebreakMandateTest is Test {
         fb.topUpReserveFor{value: 1e18}(rando); // rando never registered
     }
 
+    /* ── keeper fee ─────────────────────────────────────── */
+
+    function _registerWithFee(uint8 actions, uint256 reserveIn, uint256 fee) internal {
+        vm.prank(alice);
+        fb.register{value: reserveIn}(
+            FirebreakMandate.Terms({
+                pool: address(pool),
+                swapVenue: address(amm),
+                keeper: keeper,
+                hfTrigger: 1.2e18,
+                maxSpendPerRescue: 300e18,
+                maxSlippageWad: 1e18,
+                minImprovementWad: 0,
+                keeperFee: fee,
+                allowedActions: actions
+            })
+        );
+    }
+
+    function test_KeeperFee_PaidOnSuccessfulRescue() public {
+        _registerWithFee(TOPUP, 100e18, 2e18);
+        _drift();
+        uint256 keeperBefore = keeper.balance;
+
+        vm.prank(keeper);
+        fb.rescue(alice, _topUpPlan(40e18));
+
+        assertEq(keeper.balance, keeperBefore + 2e18, "keeper earned its flat fee");
+        (,, uint256 reserve) = fb.mandateOf(alice);
+        assertEq(reserve, 100e18 - 40e18 - 2e18, "fee came out of reserve, not collateral");
+    }
+
+    /// A keeper that cannot complete a rescue earns nothing — the fee is not a
+    /// retainer, it is payment for a repaired position.
+    function test_KeeperFee_NotPaidWhenRescueReverts() public {
+        _registerWithFee(TOPUP, 100e18, 2e18);
+        // no drift → above trigger → the whole call reverts, fee included
+        uint256 keeperBefore = keeper.balance;
+        vm.prank(keeper);
+        vm.expectRevert(FirebreakMandate.RescueNotNeeded.selector);
+        fb.rescue(alice, _topUpPlan(10e18));
+        assertEq(keeper.balance, keeperBefore, "no rescue, no fee");
+    }
+
+    /// An underfunded reserve must cost the keeper its fee, never cost the
+    /// borrower the rescue.
+    function test_KeeperFee_ShortReserveStillRescues() public {
+        _registerWithFee(TOPUP, 41e18, 5e18); // 40 for the top-up, only 1 left for a 5 fee
+        _drift();
+        uint256 hfBefore = pool.healthFactor(alice);
+        uint256 keeperBefore = keeper.balance;
+
+        vm.prank(keeper);
+        fb.rescue(alice, _topUpPlan(40e18));
+
+        assertGt(pool.healthFactor(alice), hfBefore, "the borrower still got rescued");
+        assertEq(keeper.balance, keeperBefore + 1e18, "keeper was paid only what was there");
+        (,, uint256 reserve) = fb.mandateOf(alice);
+        assertEq(reserve, 0, "reserve drained, never negative");
+    }
+
+    function test_KeeperFee_ZeroMeansFree() public {
+        _registerWithFee(TOPUP, 100e18, 0);
+        _drift();
+        uint256 keeperBefore = keeper.balance;
+        vm.prank(keeper);
+        fb.rescue(alice, _topUpPlan(40e18));
+        assertEq(keeper.balance, keeperBefore, "a borrower can run an unpaid keeper");
+    }
+
+    /// The fee is fixed at signing. Whatever the keeper does, it cannot bill
+    /// more than the borrower agreed to — including across a bigger rescue.
+    function test_KeeperFee_IsFlatRegardlessOfRescueSize() public {
+        _registerWithFee(TOPUP, 200e18, 3e18);
+        _drift();
+        uint256 keeperBefore = keeper.balance;
+        vm.prank(keeper);
+        fb.rescue(alice, _topUpPlan(150e18)); // much larger rescue
+        assertEq(keeper.balance, keeperBefore + 3e18, "size did not change the fee");
+    }
+
     /* ── rescue gates ───────────────────────────────────── */
 
     function test_RevertWhen_RescueByNonKeeper() public {
@@ -213,6 +295,18 @@ contract FirebreakMandateTest is Test {
             minSwapOut: minOut,
             minSwapOut2: 0,
             topUpAmount: 0
+        });
+    }
+
+    function _topUpPlan(uint256 amt) internal pure returns (FirebreakMandate.Plan memory) {
+        return FirebreakMandate.Plan({
+            action: TOPUP,
+            collateralToken: address(0),
+            collateralAmount: 0,
+            rotateTo: address(0),
+            minSwapOut: 0,
+            minSwapOut2: 0,
+            topUpAmount: amt
         });
     }
 
@@ -440,6 +534,7 @@ contract FirebreakMandateTest is Test {
             maxSpendPerRescue: 300e18,
             maxSlippageWad: 1e18,
             minImprovementWad: 0,
+            keeperFee: 0,
             allowedActions: TOPUP
         });
         vm.prank(alice);

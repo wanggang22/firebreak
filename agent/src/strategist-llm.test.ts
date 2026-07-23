@@ -54,6 +54,7 @@ function situation() {
     maxSpendPerRescue: 10_000n * WAD,
     maxSlippageWad: WAD,
     minImprovementWad: 0n,
+    keeperFee: 0n,
     allowedActions: ACTION.DELEVERAGE | ACTION.ROTATE | ACTION.TOPUP,
     reserve: 500n * WAD,
   };

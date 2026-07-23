@@ -61,6 +61,7 @@ contract DemoTestnet is Script {
                 maxSpendPerRescue: 50e18,
                 maxSlippageWad: 0.02e18,
                 minImprovementWad: 0.02e18,
+                keeperFee: 0,
                 allowedActions: 1 | 2 | 4
             })
         );
