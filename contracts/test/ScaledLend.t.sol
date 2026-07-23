@@ -183,6 +183,42 @@ contract ScaledLendTest is Test {
         assertEq(pool.debtOf(alice), viewDebt, "view already matched the written index");
     }
 
+    /* ── admin surface ──────────────────────────────────── */
+
+    /// Raising the exchange rate raises every holder's collateral value, and
+    /// with it their health factor and borrowing power. Left open, this is a
+    /// mint-collateral-from-nothing button.
+    function test_RevertWhen_StrangerRaisesExchangeRate() public {
+        _openPosition();
+        uint256 hfBefore = pool.healthFactor(alice);
+
+        vm.prank(address(0xBAD));
+        vm.expectRevert(ScaledLend.NotOwner.selector);
+        pool.setExchangeRate(address(mEURC), 10e18);
+
+        assertEq(pool.healthFactor(alice), hfBefore, "health unchanged by the attempt");
+    }
+
+    function test_RevertWhen_StrangerRelistsCollateral() public {
+        vm.prank(address(0xBAD));
+        vm.expectRevert(ScaledLend.NotOwner.selector);
+        pool.listCollateral(address(mEURC), 0.99e18, 0.99e18); // would make bad debt borrowable
+    }
+
+    function test_RevertWhen_StrangerSetsRate() public {
+        vm.prank(address(0xBAD));
+        vm.expectRevert(ScaledLend.NotOwner.selector);
+        pool.setRate(0);                                        // would freeze interest for everyone
+    }
+
+    /// Funding is deliberately open — paying into the pool harms no one.
+    function test_AnyoneMayFund() public {
+        vm.deal(address(0xBAD), 5e18);
+        vm.prank(address(0xBAD));
+        pool.fund{value: 5e18}();
+        assertEq(address(pool).balance, 5_005e18);
+    }
+
     /* ── the bounds still hold on a foreign pool ────────── */
 
     function test_RevertWhen_RescueAboveTriggerOnScaledPool() public {

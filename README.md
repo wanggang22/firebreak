@@ -60,7 +60,7 @@ The bottom strip links the same rescue already executed on Arc testnet.
 ## Status
 
 - [x] Design + plan (2026-07-15)
-- [x] Contracts (TDD, forge) — **71 tests green**, incl. fuzz (MockOracle, MockERC20, MiniLend + ScaledLend as two IPosition adapters, MiniSwap, FirebreakMandate)
+- [x] Contracts (TDD, forge) — **75 tests green**, incl. fuzz (MockOracle, MockERC20, MiniLend + ScaledLend as two IPosition adapters, MiniSwap, FirebreakMandate)
 - [x] Keeper agent — monitor + strategist + executor; strategist sizing proven 10/10
 - [x] Agent v1 — **first real on-chain rescue** end-to-end on a live EVM (local anvil): FX drift pushed HF to 1.120, keeper chose the cheapest bounded path (TOP-UP), HF restored to 1.380 ([evidence](agent/evidence/run-local-001.json))
 - [x] LLM strategist — **Claude ranks the vetted rescue paths** and writes the borrower-facing memo; sizing + spend cap + action whitelist stay deterministic, so the model can only pick a bounds-checked path (strict-tool enum + cheapest-path fallback). 11/11 harness tests + [live ranking evidence](agent/evidence/llm-rank-001.json)

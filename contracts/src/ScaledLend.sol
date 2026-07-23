@@ -40,6 +40,7 @@ contract ScaledLend is IPosition {
         uint256 liqThresholdWad;
     }
 
+    address public immutable owner;
     MockOracle public immutable oracle;
 
     mapping(address => Listing) public listings;
@@ -63,6 +64,7 @@ contract ScaledLend is IPosition {
     address private _rescueUser;
     uint256 private _lock = 1;
 
+    error NotOwner();
     error Unlisted();
     error ZeroAmount();
     error InsufficientCollateral();
@@ -98,6 +100,7 @@ contract ScaledLend is IPosition {
     }
 
     constructor(address oracle_) {
+        owner = msg.sender;
         oracle = MockOracle(oracle_);
         lastAccrual = block.timestamp;
     }
@@ -107,19 +110,28 @@ contract ScaledLend is IPosition {
     /* ── admin ──────────────────────────────────────────── */
 
     function listCollateral(address token, uint256 ltvWad, uint256 liqThresholdWad) external {
+        if (msg.sender != owner) revert NotOwner();
         if (!listings[token].listed) listedTokens.push(token);
         listings[token] = Listing({listed: true, ltvWad: ltvWad, liqThresholdWad: liqThresholdWad});
         if (exchangeRateWad[token] == 0) exchangeRateWad[token] = WAD;
     }
 
+    /// @notice Anyone may add native USDC liquidity to the pool.
     function fund() external payable {}
 
     function setRate(uint256 perSecondWad) external accrues {
+        if (msg.sender != owner) revert NotOwner();
         ratePerSecondWad = perSecondWad;
     }
 
-    /// Yield-bearing collateral: shares redeem for more of the token over time.
+    /// @notice Yield-bearing collateral: shares redeem for more of the token
+    ///         over time. Owner-only, and for a reason worth stating — raising
+    ///         the rate raises every holder's collateral value, and therefore
+    ///         their health factor and borrowing power. An open setter here
+    ///         would let anyone inflate their own position and borrow against
+    ///         collateral that does not exist.
     function setExchangeRate(address token, uint256 rateWad) external {
+        if (msg.sender != owner) revert NotOwner();
         require(rateWad >= exchangeRateWad[token], "rate must not fall");
         exchangeRateWad[token] = rateWad;
     }

@@ -116,9 +116,21 @@ It also cannot farm frequency: a rescue is reachable only below the borrower's t
 
 Paid last, after every bound has passed, so it is payment for a repaired position rather than a retainer. An underfunded reserve costs the keeper its fee and never costs the borrower the rescue (`test_KeeperFee_ShortReserveStillRescues`). A borrower may set it to zero and run an unpaid keeper.
 
-### 7. Tests and reproducibility
+### 7. What our own audit found
 
-- **Contracts:** 71 Foundry tests green, including fuzz — `FirebreakMandate`, `MiniLend` + `ScaledLend` (two independent `IPosition` adapters), `MiniSwap`, `MockOracle`, `MockERC20`.
+We reviewed the code added late in the build rather than assuming it was fine, and it was not.
+
+`ScaledLend.setExchangeRate` shipped **without an owner check**. Raising that rate raises every holder's collateral value, and with it their health factor and borrowing power — an open setter is a mint-collateral-from-nothing button. `listCollateral` and `setRate` were exposed the same way. MiniLend had the owner guard from the start; the second adapter was written against its structure and the guard did not come along.
+
+Fixed, and pinned by four tests that attempt the attack from a stranger address (`test_RevertWhen_StrangerRaisesExchangeRate` asserts the health factor is unchanged by the attempt). `fund()` stays deliberately open — paying into a pool harms nobody.
+
+The same pass caught a `Terms` literal in `DemoSetup.s.sol` that never got the new `keeperFee` field. It compiled from cache and surfaced only on a clean rebuild, which is exactly the kind of thing that would have broken a fresh clone.
+
+We would rather show the defect and the fix than present a clean sheet.
+
+### 8. Tests and reproducibility
+
+- **Contracts:** 75 Foundry tests green, including fuzz — `FirebreakMandate`, `MiniLend` + `ScaledLend` (two independent `IPosition` adapters), `MiniSwap`, `MockOracle`, `MockERC20`.
 - **Agent:** 10/10 strategist sizing + 11/11 LLM-safety harness (valid picks honored including non-cheapest; out-of-set picks and thrown rankers fall back; below-trigger never calls the model) + 11/11 reserve-refill policy.
 - **Local console:** `npm run demo:server` boots anvil + the scenario + an SSE server; the single-screen dashboard streams each keeper stage live (drift → candidates → Claude's memo → tx → restored). End-to-end smoke test covers drift → rescue → reset.
 - Every rescue receipt and memo is committed under `agent/evidence/`.
