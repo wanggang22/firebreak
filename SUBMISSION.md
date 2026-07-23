@@ -96,10 +96,30 @@ Two identical positions (100 mEURC collateral, 50 USDC debt) drift toward liquid
 
 Same market, opposite outcomes. The firewall acts early precisely so you never reach the liquidation line — which is also the honest answer to *"why rescue at 1.20 not 1.0?"* ([evidence](agent/evidence/run-local-twin.json), `contracts/script/DemoTwin.s.sol`).
 
-### 5. Tests and reproducibility
+### 5. Protocol-agnostic — falsified, not asserted
 
-- **Contracts:** 55 Foundry tests green, including fuzz — `FirebreakMandate`, `MiniLend` (IPosition), `MiniSwap`, `MockOracle`, `MockERC20`.
-- **Agent:** 8/8 strategist sizing + 11/11 LLM-safety harness (valid picks honored including non-cheapest; out-of-set picks and thrown rankers fall back; below-trigger never calls the model).
+Every integration claims to be protocol-agnostic. With only MiniLend behind `IPosition` ours was self-certified: one adapter, written by us, shaped like our own interface.
+
+So we wrote a second pool designed to break it. **`ScaledLend` shares no accounting with MiniLend**: collateral is held as *shares* redeemable at a growing exchange rate, and debt is stored *scaled* against a borrow index that accrues every second — how Aave and Compound actually work, and the case that breaks naive integrations. A keeper assuming `collateralOf` returns a stored number, or that debt only moves when someone transacts, sizes the rescue wrong here.
+
+**The same `FirebreakMandate` bytecode and the same unmodified keeper guard both pools.** (`test_SameMandateRescuesADifferentProtocol`, `test_DeleverageOnScaledCollateral`.)
+
+It also exposes a risk MiniLend cannot express. In MiniLend, health only falls when the oracle moves — a drift that may never come. Here the index rises every second, so **health decays with the market perfectly still**. `test_HealthDecaysWithAStillMarket` pins it: identical price before and after, lower health factor. That is not a possibility to hedge against; it is arithmetic, and it is the purest form of the slow slide Firebreak exists to catch.
+
+### 6. Keeper economics — a fee that cannot reward unnecessary rescues
+
+An autonomous agent that costs money to run has to be paid, but a careless fee turns the keeper against the borrower it guards. The shape matters more than the number.
+
+The fee is **flat and fixed at signing**, not a share of what was moved. A percentage would pay more for larger rescues and quietly reward taking the most expensive viable path; flat leaves the keeper indifferent to size, so choosing the cheapest path that works costs it nothing.
+
+It also cannot farm frequency: a rescue is reachable only below the borrower's trigger and must lift health by `minImprovement` — which pushes the position back out of the band it would have to re-enter to bill again. **Keeper revenue tracks how often the market actually threatens the position, not anything the keeper decides.**
+
+Paid last, after every bound has passed, so it is payment for a repaired position rather than a retainer. An underfunded reserve costs the keeper its fee and never costs the borrower the rescue (`test_KeeperFee_ShortReserveStillRescues`). A borrower may set it to zero and run an unpaid keeper.
+
+### 7. Tests and reproducibility
+
+- **Contracts:** 71 Foundry tests green, including fuzz — `FirebreakMandate`, `MiniLend` + `ScaledLend` (two independent `IPosition` adapters), `MiniSwap`, `MockOracle`, `MockERC20`.
+- **Agent:** 10/10 strategist sizing + 11/11 LLM-safety harness (valid picks honored including non-cheapest; out-of-set picks and thrown rankers fall back; below-trigger never calls the model) + 11/11 reserve-refill policy.
 - **Local console:** `npm run demo:server` boots anvil + the scenario + an SSE server; the single-screen dashboard streams each keeper stage live (drift → candidates → Claude's memo → tx → restored). End-to-end smoke test covers drift → rescue → reset.
 - Every rescue receipt and memo is committed under `agent/evidence/`.
 
@@ -139,8 +159,8 @@ Verified live against Circle Gateway, not mocked: Arc Testnet is confirmed suppo
 ## Roadmap
 
 - **Circle wallet spend policies** as a second enforced bound, once Arc + Agent Wallets meet on mainnet.
-- **Real protocol adapters** — the keeper speaks a small `IPosition` interface; MiniLend is the first adapter, and wiring a live Arc lending venue proves the protocol-agnostic claim.
-- **Keeper economics** — a capped per-rescue fee inside the Mandate, designed so it cannot incentivise unnecessary rescues.
+- **A live Arc lending venue.** Two independent adapters (`MiniLend`, `ScaledLend`) now show the `IPosition` abstraction survives genuinely different accounting; the remaining step is a third adapter against a deployed third-party pool, which is integration work rather than design risk.
+- **Cross-chain refill, end to end.** The Unified Balance integration is verified live against Circle Gateway and the refill policy is tested, but we have not yet executed a funded `deposit → addDelegate → spend` on testnet. We would rather say that than show a screenshot of a flow we have not run.
 - **Agent identity** — authorize a verified agent identity (ERC-8004 / KYA) instead of a raw keeper address, so a borrower can revoke a *class* of keeper rather than one key.
 - **Multi-keeper coordination** — first-writer-wins on-chain today; commit-reveal if racing becomes real.
 
