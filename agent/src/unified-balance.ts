@@ -8,7 +8,7 @@
 // Chain support is read live from Circle Gateway rather than hardcoded, so a
 // wrong assumption surfaces as an error here instead of a silent mis-send.
 import { UnifiedBalanceKit, UnifiedBalanceChain } from "@circle-fin/unified-balance-kit";
-import { parseEther } from "viem";
+import { parseEther, formatEther } from "viem";
 import type { Address } from "./types.ts";
 
 /** Arc testnet, as Firebreak already knows it. Cross-checked against Gateway. */
@@ -121,7 +121,10 @@ export async function spendToArc(args: {
     await assertArcSupported();
     const result = await getKit().spend({
       token: "USDC",
-      amount: (Number(args.amountWad) / 1e18).toString(),
+      // formatEther, never Number(). Number() loses the low digits of an
+      // 18-decimal amount (…456789 becomes …4567) and renders small values in
+      // exponent form ("1e-9"), either of which sends the wrong amount or none.
+      amount: formatEther(args.amountWad),
       from: { adapter: args.fromAdapter },
       to: {
         adapter: args.toAdapter,

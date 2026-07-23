@@ -11,7 +11,8 @@
     "demo:server": "tsx src/server.ts",
     "smoke": "tsx src/server.smoke.ts",
     "reserve": "tsx src/reserve-status.ts",
-    "test:reserve": "tsx src/reserve.test.ts"
+    "test:reserve": "tsx src/reserve.test.ts",
+    "test:amount": "tsx src/amount.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",

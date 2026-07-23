@@ -126,12 +126,19 @@ Fixed, and pinned by four tests that attempt the attack from a stranger address 
 
 The same pass caught a `Terms` literal in `DemoSetup.s.sol` that never got the new `keeperFee` field. It compiled from cache and surfaced only on a clean rebuild, which is exactly the kind of thing that would have broken a fresh clone.
 
+Continuing into the keeper's own code found two more, both on the path that moves money:
+
+- **The refill amount was rendered with `Number()`.** Circle's SDK takes the amount as a decimal string, and `Number(bigint)/1e18` drops the low digits of an 18-decimal value (`1.234567890123456789` became `1.2345678901234567`) and prints small amounts in exponent form (`1e-9`), which is not a decimal number at all. Either one sends the wrong amount, or none. Now `formatEther`, pinned by 8 tests asserting every amount renders exactly and reparses to itself.
+- **A mis-ordered refill policy produced a negative amount.** With `target` at or below `floor`, the gap subtraction went negative and bigint carried the sign silently downstream. Now clamped, with a test sweeping policies and inputs to assert no field ever goes negative.
+
+Neither was reachable in the happy path, which is why tests written from the happy path missed them.
+
 We would rather show the defect and the fix than present a clean sheet.
 
 ### 8. Tests and reproducibility
 
 - **Contracts:** 75 Foundry tests green, including fuzz — `FirebreakMandate`, `MiniLend` + `ScaledLend` (two independent `IPosition` adapters), `MiniSwap`, `MockOracle`, `MockERC20`.
-- **Agent:** 10/10 strategist sizing + 11/11 LLM-safety harness (valid picks honored including non-cheapest; out-of-set picks and thrown rankers fall back; below-trigger never calls the model) + 11/11 reserve-refill policy.
+- **Agent:** 10/10 strategist sizing + 11/11 LLM-safety harness (valid picks honored including non-cheapest; out-of-set picks and thrown rankers fall back; below-trigger never calls the model) + 16/16 reserve-refill policy + 8/8 amount rendering.
 - **Local console:** `npm run demo:server` boots anvil + the scenario + an SSE server; the single-screen dashboard streams each keeper stage live (drift → candidates → Claude's memo → tx → restored). End-to-end smoke test covers drift → rescue → reset.
 - Every rescue receipt and memo is committed under `agent/evidence/`.
 

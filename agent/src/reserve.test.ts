@@ -78,5 +78,39 @@ console.log("\nreserve policy");
   check("default policy leaves a healthy reserve alone", !s.needsRefill);
 }
 
+// ── malformed policy must not produce a negative amount ───────────
+{
+  // target below floor is a configuration mistake; bigint would carry the
+  // negative silently into every number downstream.
+  const inverted: ReservePolicy = { floorWad: E("10"), targetWad: E("5"), maxRefillWad: E("50") };
+  const s = planRefill(E("7"), E("1000"), inverted);
+  check("inverted policy never yields a negative refill", s.refillWad >= 0n, `refill=${s.refillWad}`);
+  check("  …and refuses to act", !s.needsRefill);
+  check("  …and reports no negative shortfall", s.shortfallWad >= 0n, `short=${s.shortfallWad}`);
+}
+{
+  const equal: ReservePolicy = { floorWad: E("5"), targetWad: E("5"), maxRefillWad: E("50") };
+  const s = planRefill(E("4"), E("1000"), equal);
+  check("target == floor yields a sane, non-negative plan", s.refillWad >= 0n && s.refillWad <= E("1"), `refill=${s.refillWad}`);
+}
+{
+  // Whatever the policy and inputs, no field may go negative.
+  let ok = true, why = "";
+  const policies: ReservePolicy[] = [P, DEFAULT_POLICY,
+    { floorWad: E("10"), targetWad: E("5"), maxRefillWad: E("50") },
+    { floorWad: E("5"), targetWad: E("5"), maxRefillWad: 0n }];
+  for (const pol of policies) {
+    for (const arc of ["0", "3", "7", "999"]) {
+      for (const uni of ["0", "8", "1000"]) {
+        const s = planRefill(E(arc), E(uni), pol);
+        if (s.refillWad < 0n || s.shortfallWad < 0n) {
+          ok = false; why = `arc=${arc} uni=${uni} refill=${s.refillWad} short=${s.shortfallWad}`; break;
+        }
+      }
+    }
+  }
+  check("no field ever goes negative, across policies and inputs", ok, why);
+}
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed === 0 ? 0 : 1);

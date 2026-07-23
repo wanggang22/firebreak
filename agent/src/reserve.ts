@@ -67,7 +67,11 @@ export function planRefill(
   };
   if (onArcWad >= policy.floorWad) return base;
 
-  const want = policy.targetWad - onArcWad;                 // gap to target
+  // A mis-ordered policy — target at or below floor — would make this
+  // subtraction negative, and bigint carries the sign silently into every
+  // number downstream. Clamp instead: a policy that cannot say how much to
+  // refill should refill nothing, not a negative amount.
+  const want = policy.targetWad > onArcWad ? policy.targetWad - onArcWad : 0n;
   const capped = want > policy.maxRefillWad ? policy.maxRefillWad : want;
   const affordable = capped > unifiedWad ? unifiedWad : capped;
 
