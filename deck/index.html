@@ -188,15 +188,15 @@
       <h3>Contracts — Foundry</h3>
       <ul style="margin:0">
         <li><b>71 tests green</b>, incl. fuzz</li>
-        <li>FirebreakMandate · MiniLend (IPosition) · MiniSwap · MockOracle</li>
+        <li>FirebreakMandate · <b>two IPosition adapters</b> (MiniLend, ScaledLend) · MiniSwap · MockOracle</li>
         <li><b>Deployed on Arc testnet</b> (chainId 5042002)</li>
       </ul>
     </div>
     <div class="card">
       <h3>Keeper agent — TypeScript</h3>
       <ul style="margin:0">
-        <li>monitor · strategist · executor</li>
-        <li><b>8/8</b> sizing + <b>11/11</b> LLM-safety tests</li>
+        <li>monitor · strategist · executor · <b>reserve refill</b></li>
+        <li><b>10/10</b> sizing + <b>11/11</b> LLM-safety + <b>11/11</b> refill policy</li>
         <li>Every rescue receipt + memo in <b>evidence/</b></li>
       </ul>
     </div>
@@ -232,18 +232,18 @@
     </tr>
     <tr>
       <td><b>Right core products</b></td>
-      <td class="ok">The keeper <b>runs on a Circle Agent Wallet</b> (ERC-4337 smart account) on Arc testnet — Claude ranks, the agent wallet executes the rescue on-chain, no raw key</td>
+      <td class="ok"><b>Agent Stack</b> — the keeper runs on a Circle Agent Wallet (ERC-4337) on Arc, no raw key. <b>App Kits / Unified Balance</b> — the borrower's rescue reserve lives cross-chain and the keeper refills Arc from it, under a delegate authorization shaped exactly like the Mandate</td>
     </tr>
     <tr>
       <td><b>Use case &amp; impact</b></td>
-      <td class="ok">Liquidation penalties are a real, quantified loss; drift-based collateral is Arc's native case; protocol-agnostic via IPosition</td>
+      <td class="ok">Liquidation penalties are a real, quantified loss. Protocol-agnostic is <b>falsified, not asserted</b>: a second pool with share-based collateral and index-accrued debt, guarded by the same Mandate bytecode. Keeper economics designed so the fee cannot reward unnecessary rescues</td>
     </tr>
     <tr>
       <td><b>Execution &amp; presentation</b></td>
-      <td class="ok">74 tests, live console, on-chain evidence for every number — a clear working demo, not complexity for its own sake</td>
+      <td class="ok"><b>103 tests</b>, live console, on-chain evidence for every number — a clear working demo, not complexity for its own sake</td>
     </tr>
   </table>
-  <p style="margin-top:24px;color:var(--faint)">One honest limit: Circle wallet <b>spend policies are mainnet-only</b> and Arc is testnet-only for Agent Wallets, so the policy guardrail can't be demonstrated on Arc yet — the Mandate contract is the enforcing layer there.</p>
+  <p style="margin-top:24px;color:var(--faint)">Two honest limits. Circle wallet <b>spend policies are mainnet-only</b> and Arc is testnet-only for Agent Wallets, so that guardrail can't be shown on Arc yet — the Mandate contract is the enforcing layer there. And the cross-chain refill is verified live against Circle Gateway, but we have <b>not yet run a funded deposit → spend</b> on testnet; we'd rather say so than show a flow we haven't executed.</p>
 </section>
 
 <!-- 9 WHY ARC -->
@@ -297,8 +297,8 @@
   <h2>From hackathon to production.</h2>
   <ul>
     <li><b>Circle wallet spend policies</b> — the keeper already runs on an Agent Wallet; when Arc reaches mainnet its policy becomes a second, Circle-enforced bound alongside the Mandate</li>
-    <li><b>Real protocol adapters</b> — the keeper already speaks IPosition; wiring a live Arc lending venue proves the protocol-agnostic claim</li>
-    <li><b>Keeper economics</b> — a capped per-rescue fee inside the Mandate, designed so it can't incentivise unnecessary rescues</li>
+    <li><b>A live Arc lending venue</b> — two independently-shaped adapters already show the IPosition abstraction holds; a third against a deployed third-party pool is integration work, not design risk</li>
+    <li><b>The funded cross-chain refill</b> — the Unified Balance integration is verified live against Gateway and the refill policy is tested, but the funded deposit → delegate → spend has not been run on testnet yet</li>
     <li><b>Agent identity</b> — authorize a verified agent identity (ERC-8004 / KYA) instead of a raw keeper address, so a borrower can revoke a class of keeper</li>
     <li><b>Multi-keeper coordination</b> — first-writer-wins on-chain today; commit-reveal if racing becomes real</li>
   </ul>
